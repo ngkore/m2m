@@ -1063,9 +1063,9 @@ body {
 
 .download-card {
   padding: var(--s5) var(--s6);
-  background: var(--success-bg);
-  border: 1px solid var(--success-border);
-  border-left: 4px solid var(--success);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--text-primary);
   border-radius: var(--r-md);
 }
 
@@ -1080,7 +1080,7 @@ body {
   font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--success);
+  color: var(--text-primary);
   margin-bottom: 3px;
   letter-spacing: 0.01em;
 }
