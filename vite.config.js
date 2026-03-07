@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 export default defineConfig({
-  plugins: [basicSsl()],
-  // Serve everything in images/ as static files at the root URL.
-  // images/favicon/* → /favicon/*   images/m2m-logo.png → /m2m-logo.png
+  plugins: isDev ? [basicSsl()] : [],
   publicDir: 'images',
   server: {
     host: process.env.HOST || 'localhost',

@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { convertMediumUrl, convertHtmlToZip } from './converters/htmlToMarkdown.js';
 import { convertMarkdownToHtml } from './converters/markdownToHtml.js';
@@ -285,6 +287,13 @@ app.get('/api/download-zip/:token', (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${entry.slug}.zip"`);
   res.setHeader('Content-Length', entry.buffer.length);
   res.end(entry.buffer);
+});
+
+// Serve built Vite frontend in production
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use(express.static(path.join(__dirname, '../dist')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 const HOST = process.env.HOST || 'localhost';
