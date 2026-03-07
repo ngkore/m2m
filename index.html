@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary Meta -->
+    <title>M2M</title>
+    <meta
+      name="description"
+      content="M2M converts Markdown to Medium-compatible HTML and scrapes Medium articles back to clean Markdown with images. Free, open-source, and runs entirely in your browser."
+    />
+    <meta
+      name="keywords"
+      content="markdown to medium, medium to markdown, markdown converter, medium article exporter, markdown editor, medium publisher tool, open source markdown"
+    />
+    <meta name="author" content="M2M" />
+    <meta name="robots" content="index, follow" />
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#0a0a0a"
+      media="(prefers-color-scheme: dark)"
+    />
+
+    <!-- Canonical — replace with your deployed URL -->
+    <!-- <link rel="canonical" href="https://your-domain.com" /> -->
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="M2M" />
+    <meta property="og:title" content="M2M — Markdown to Medium Converter" />
+    <meta
+      property="og:description"
+      content="Convert Markdown to Medium-compatible HTML, or scrape any Medium article back to clean Markdown with full image downloads. Free and open-source."
+    />
+    <!-- Replace with your deployed domain -->
+    <!-- <meta property="og:url" content="https://your-domain.com" /> -->
+    <!-- <meta property="og:image" content="https://your-domain.com/m2m-logo.png" /> -->
+    <meta
+      property="og:image:alt"
+      content="M2M — Markdown and Medium converter"
+    />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="M2M — Markdown to Medium Converter" />
+    <meta
+      name="twitter:description"
+      content="Convert Markdown to Medium-compatible HTML, or scrape any Medium article back to clean Markdown with full image downloads. Free and open-source."
+    />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=ABeeZee:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/src/style.css" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/favicon/favicon-16x16.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/favicon/favicon-32x32.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/favicon/apple-touch-icon.png"
+    />
+    <link rel="manifest" href="/favicon/site.webmanifest" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "M2M",
+        "description": "Convert Markdown to Medium-compatible HTML, or scrape any Medium article back to clean Markdown with full image downloads.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires a modern browser with JavaScript enabled",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "Markdown to Medium HTML conversion",
+          "Medium article to Markdown conversion",
+          "Full-quality image download from Medium articles",
+          "Table to image rendering for Medium compatibility",
+          "GitHub admonition support",
+          "Light and dark theme"
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Header -->
+      <header class="app-header" id="app-header">
+        <div class="logo">
+          <div class="logo-icon">
+            <img src="/m2m-logo.png" alt="M2M logo" width="28" height="28" />
+          </div>
+          <h1
+            class="logo-typewriter"
+            aria-label="M2M — Markdown to Medium and Medium to Markdown converter"
+          >
+            <span id="typewriter-text"></span
+            ><span class="typewriter-cursor" aria-hidden="true"></span>
+          </h1>
+        </div>
+
+        <!-- Tab Navigation -->
+        <nav
+          class="tab-nav"
+          id="tab-nav"
+          role="tablist"
+          aria-label="Conversion mode"
+        >
+          <button
+            class="tab-btn active"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panel-md-to-medium"
+            id="tab-md-to-medium"
+            data-tab="md-to-medium"
+          >
+            MD → Medium
+          </button>
+          <button
+            class="tab-btn"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-medium-to-md"
+            id="tab-medium-to-md"
+            data-tab="medium-to-md"
+          >
+            Medium → MD
+          </button>
+        </nav>
+
+        <!-- Theme Toggle -->
+        <button
+          class="theme-toggle"
+          id="theme-toggle"
+          title="Toggle light/dark theme"
+          aria-label="Toggle light and dark theme"
+        >
+          <svg
+            class="theme-icon sun"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          <svg
+            class="theme-icon moon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+      </header>
+
+      <!-- Main content — single <main> wraps both tab panels -->
+      <main id="app-main">
+        <!-- Tab 1: Markdown → Medium -->
+        <section
+          class="tab-content active"
+          id="panel-md-to-medium"
+          role="tabpanel"
+          aria-labelledby="tab-md-to-medium"
+        >
+          <div class="editor-preview-container">
+            <div class="pane editor-pane">
+              <div class="pane-header">
+                <h2>Markdown Editor</h2>
+                <div class="pane-actions">
+                  <button
+                    class="btn btn-sm btn-ghost"
+                    id="clear-btn"
+                    title="Clear editor"
+                    aria-label="Clear editor"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    class="btn btn-sm btn-ghost"
+                    id="reformat-btn"
+                    title="Reformat Markdown"
+                    aria-label="Reformat Markdown"
+                  >
+                    Reformat
+                  </button>
+                  <label
+                    class="btn btn-sm btn-ghost"
+                    id="upload-btn"
+                    tabindex="0"
+                    title="Upload a Markdown file"
+                    aria-label="Upload a Markdown file"
+                  >
+                    Upload .md
+                    <input
+                      type="file"
+                      accept=".md,.markdown,.txt"
+                      id="file-input"
+                      aria-label="Choose a Markdown file to upload"
+                      hidden
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <!-- URL import bar -->
+              <div class="md-url-bar" id="md-url-bar">
+                <form
+                  class="md-url-form"
+                  id="md-url-form"
+                  aria-label="Import Markdown from URL"
+                >
+                  <svg
+                    class="md-url-icon"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path
+                      d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm2.45 5.45a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 11-2.83-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25z"
+                    />
+                  </svg>
+                  <input
+                    type="url"
+                    class="md-url-input"
+                    id="md-url-input"
+                    placeholder="https://github.com/user/repo/main/README.md"
+                    aria-label="Raw Markdown file URL"
+                  />
+                  <button
+                    type="submit"
+                    class="md-url-fetch-btn"
+                    id="md-url-fetch-btn"
+                    aria-label="Fetch Markdown from URL"
+                  >
+                    <span class="md-url-fetch-text">Fetch</span>
+                    <span class="md-url-fetch-loader" hidden aria-hidden="true"
+                      ><span class="spinner-sm"></span
+                    ></span>
+                  </button>
+                </form>
+              </div>
+              <!-- Error shown below the bar to avoid layout disruption -->
+              <div
+                class="md-url-error-bar"
+                id="md-url-error"
+                role="alert"
+                aria-live="assertive"
+                hidden
+              ></div>
+
+              <textarea
+                class="editor-textarea"
+                id="markdown-input"
+                placeholder="Write or paste Markdown here, upload a .md file, or import from a URL above."
+                spellcheck="false"
+                aria-label="Markdown editor"
+                aria-multiline="true"
+              ></textarea>
+            </div>
+
+            <div
+              class="divider"
+              id="divider"
+              role="separator"
+              aria-hidden="true"
+            ></div>
+
+            <div class="pane preview-pane">
+              <div class="pane-header">
+                <h2>Medium Preview</h2>
+                <div class="pane-actions">
+                  <button class="btn btn-sm btn-ghost" id="export-html-btn" title="Export as HTML file" aria-label="Export preview as HTML">HTML</button>
+                  <button class="btn btn-sm btn-ghost" id="export-pdf-btn" title="Export as PDF" aria-label="Export preview as PDF">PDF</button>
+                  <button
+                    class="btn btn-sm btn-accent"
+                    id="copy-btn"
+                    title="Copy as Medium HTML"
+                    aria-label="Copy rendered HTML for Medium"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+              <div
+                class="preview-content"
+                id="preview-content"
+                aria-label="Medium HTML preview"
+              >
+                <div class="preview-placeholder">
+                  <p>Your preview will appear here</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 2: Medium → Markdown -->
+        <section
+          class="tab-content"
+          id="panel-medium-to-md"
+          role="tabpanel"
+          aria-labelledby="tab-medium-to-md"
+          hidden
+        >
+          <div class="editor-preview-container">
+            <!-- Left: Input/Convert Form -->
+            <div class="pane convert-pane">
+              <div class="pane-header">
+                <h2>Medium URL</h2>
+              </div>
+              <div class="convert-form-content">
+                <div class="convert-form-inner">
+                <p class="convert-description">
+                  Paste a Medium article URL below. We'll extract the content,
+                  download all images at full quality, and generate clean
+                  Markdown.
+                </p>
+
+                <form
+                  class="url-form"
+                  id="url-form"
+                  aria-label="Convert Medium article to Markdown"
+                >
+                  <div class="input-group">
+                    <svg
+                      class="input-icon"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm2.45 5.45a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 11-2.83-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25z"
+                      />
+                    </svg>
+                    <input
+                      type="url"
+                      class="url-input"
+                      id="url-input"
+                      placeholder="https://medium.com/@username/article-title-abc123"
+                      aria-label="Medium article URL"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    class="btn btn-primary btn-convert"
+                    id="convert-btn"
+                    aria-label="Convert Medium article to Markdown"
+                  >
+                    <span class="btn-text">Convert to Markdown</span>
+                    <span class="btn-loader" hidden aria-hidden="true">
+                      <span class="spinner"></span>
+                      Converting...
+                    </span>
+                  </button>
+                </form>
+
+                <!-- Progress -->
+                <div
+                  class="progress-section"
+                  id="progress-section"
+                  role="status"
+                  aria-live="polite"
+                  aria-label="Conversion progress"
+                  hidden
+                >
+                  <div
+                    class="progress-bar"
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <div class="progress-fill" id="progress-fill"></div>
+                  </div>
+                  <p class="progress-text" id="progress-text">
+                    Fetching article...
+                  </p>
+                </div>
+
+                <!-- Error -->
+                <div
+                  class="error-message"
+                  id="error-message"
+                  role="alert"
+                  aria-live="assertive"
+                  hidden
+                >
+                  <svg class="error-icon" width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+                    <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 11.5a.75.75 0 110-1.5.75.75 0 010 1.5zm-.75-8.25a.75.75 0 011.5 0v4.5a.75.75 0 01-1.5 0V4.25z"/>
+                  </svg>
+                  <span id="error-text"></span>
+                </div>
+
+                <!-- Download -->
+                <div class="download-section" id="download-section" hidden>
+                  <div class="download-card">
+                    <div class="download-card-header">
+                      <div class="download-card-text">
+                        <h3>Conversion complete</h3>
+                        <p>
+                          ZIP contains the Markdown file and an images folder.
+                        </p>
+                      </div>
+                      <button
+                        class="btn btn-success"
+                        id="download-btn"
+                        aria-label="Download converted Markdown as ZIP"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+                          <path d="M2.75 14A1.75 1.75 0 011 12.25v-2.5a.75.75 0 011.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 00.25-.25v-2.5a.75.75 0 011.5 0v2.5A1.75 1.75 0 0113.25 14H2.75zM7.25 7.69V2a.75.75 0 011.5 0v5.69l1.97-1.97a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 6.78a.75.75 0 011.06-1.06l1.97 1.97z"/>
+                        </svg>
+                        Download ZIP
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <!-- Freedium note -->
+                <div class="freedium-note" role="note">
+                  <svg class="freedium-note-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+                    <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a.75.75 0 110 1.5A.75.75 0 018 3zm-.25 3.25a.75.75 0 011.5 0v4.5a.75.75 0 01-1.5 0v-4.5z"/>
+                  </svg>
+                  <p>
+                    Paywall articles are fetched via <strong>Freedium</strong>. If conversion
+                    fails on paywalled posts, Freedium may have moved to a new domain — update
+                    <code>FREEDIUM_URL</code> in <code>.env</code> and restart the server.
+                  </p>
+                </div>
+                </div><!-- /.convert-form-inner -->
+              </div>
+            </div>
+
+            <div class="divider" role="separator" aria-hidden="true"></div>
+
+            <!-- Right: Markdown Preview -->
+            <div class="pane preview-pane">
+              <div class="pane-header">
+                <h2>Markdown Preview</h2>
+                <div class="pane-actions">
+                  <button class="btn btn-sm btn-ghost" id="m2md-export-html-btn" title="Export as HTML file" aria-label="Export preview as HTML" disabled>HTML</button>
+                  <button class="btn btn-sm btn-ghost" id="m2md-export-pdf-btn" title="Export as PDF" aria-label="Export preview as PDF" disabled>PDF</button>
+                  <button
+                    class="btn btn-sm btn-accent"
+                    id="m2md-copy-btn"
+                    title="Copy Markdown"
+                    aria-label="Copy converted Markdown to clipboard"
+                    disabled
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+              <div
+                class="preview-content"
+                id="m2md-preview-content"
+                aria-label="Converted Markdown preview"
+              >
+                <div class="preview-placeholder">
+                  <p>Converted Markdown will appear here</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

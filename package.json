@@ -1,0 +1,35 @@
+{
+  "name": "m2m",
+  "version": "1.0.0",
+  "description": "Convert between Markdown files and Medium articles",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --env-file=.env server/index.js",
+    "dev:client": "node --env-file=.env ./node_modules/vite/bin/vite.js",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "highlight.js": "^11.11.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.0",
+    "jszip": "^3.10.1",
+    "marked": "^15.0.6",
+    "marked-highlight": "^2.2.1",
+    "puppeteer": "^24.38.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "slugify": "^1.6.6",
+    "turndown": "^7.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.1.4",
+    "concurrently": "^9.1.2",
+    "vite": "^6.2.0"
+  }
+}
