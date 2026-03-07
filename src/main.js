@@ -1216,7 +1216,7 @@ async function exportToPdf(paneEl, filename, btnEl) {
     /* ── Table images ────────────────────── */
     ${S} .table-image-wrapper { display: block; margin: ${resolve('--s6') || '24px'} 0; max-width: 100%; }
     ${S} .table-image-wrapper img { margin: 0; border-radius: ${resolve('--r-sm') || '3px'}; }
-    ${S} .table-image-badge, ${S} .table-image-copy, ${S} .ref-label { display: none !important; }
+    ${S} .table-image-badge, ${S} .table-image-copy, ${S} .m2md-image-copy, ${S} .ref-label { display: none !important; }
 
     /* ── Highlight.js ────────────────────── */
     ${S} .hljs { background: transparent !important; }
@@ -1386,7 +1386,9 @@ exportPdfBtn.addEventListener('click', () => {
 m2mdExportHtmlBtn.addEventListener('click', () => {
   const inner = m2mdPreviewContent.querySelector('.medium-preview');
   if (!inner) return;
-  const doc = buildExportDocument(inner.innerHTML, currentArticleName || 'article');
+  const clone = inner.cloneNode(true);
+  clone.querySelectorAll('.m2md-image-copy').forEach((el) => el.remove());
+  const doc = buildExportDocument(clone.innerHTML, currentArticleName || 'article');
   downloadHtml(doc, `${currentArticleName || 'article'}.html`);
 });
 
@@ -1598,9 +1600,15 @@ urlForm.addEventListener('submit', async (e) => {
               showProgress(95, `Loading images (${loaded} of ${total})...`);
             }
           }
+          addM2mdCopyImageButtons(m2mdPreviewContent);
         } catch (zipErr) {
           console.error('Failed to extract images from ZIP for preview:', zipErr);
         }
+      }
+
+      // Add copy buttons for images loaded from external URLs (no ZIP)
+      if (!data.zipBase64) {
+        addM2mdCopyImageButtons(m2mdPreviewContent);
       }
     }
 
@@ -1701,6 +1709,64 @@ downloadBtn.addEventListener('click', async () => {
     flashDownloadSuccess();
   }
 });
+
+// ───────────────────────────────────────
+// Copy Image buttons (Medium → MD preview)
+// ───────────────────────────────────────
+
+function addM2mdCopyImageButtons(container) {
+  const images = container.querySelectorAll('.medium-preview img');
+  images.forEach((img) => {
+    // Skip if already wrapped
+    if (img.parentElement?.classList.contains('m2md-image-wrapper')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'm2md-image-wrapper';
+
+    const copyImgBtn = document.createElement('button');
+    copyImgBtn.className = 'm2md-image-copy';
+    copyImgBtn.type = 'button';
+    copyImgBtn.title = 'Copy image to clipboard';
+    copyImgBtn.textContent = 'Copy Image';
+
+    copyImgBtn.addEventListener('click', async () => {
+      try {
+        const resp = await fetch(img.src);
+        const blob = await resp.blob();
+        // Convert to PNG if not already
+        const pngBlob = blob.type === 'image/png'
+          ? blob
+          : await new Promise((resolve) => {
+              const canvas = document.createElement('canvas');
+              const tempImg = new Image();
+              tempImg.onload = () => {
+                canvas.width = tempImg.naturalWidth;
+                canvas.height = tempImg.naturalHeight;
+                canvas.getContext('2d').drawImage(tempImg, 0, 0);
+                canvas.toBlob((b) => resolve(b), 'image/png');
+              };
+              tempImg.src = img.src;
+            });
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': pngBlob }),
+        ]);
+        copyImgBtn.textContent = '✓ Copied!';
+        copyImgBtn.classList.add('copied');
+      } catch (err) {
+        copyImgBtn.textContent = '✗ Failed';
+        copyImgBtn.classList.add('failed');
+      }
+      setTimeout(() => {
+        copyImgBtn.textContent = 'Copy Image';
+        copyImgBtn.classList.remove('copied', 'failed');
+      }, 2000);
+    });
+
+    img.parentNode.insertBefore(wrapper, img);
+    wrapper.appendChild(img);
+    wrapper.appendChild(copyImgBtn);
+  });
+}
 
 // ───────────────────────────────────────
 // Tab support in textarea

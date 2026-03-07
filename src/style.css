@@ -1158,6 +1158,54 @@ body {
   border-color: var(--error);
 }
 
+/* ─── M2MD Preview — per-image copy button ──── */
+.m2md-image-wrapper {
+  position: relative;
+  display: block;
+  margin: var(--s6) 0;
+  max-width: 100%;
+}
+
+.m2md-image-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  margin: 0;
+}
+
+.m2md-image-copy {
+  display: inline-block;
+  margin-top: var(--s1);
+  padding: 2px 8px;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.m2md-image-copy:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.m2md-image-copy.copied {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.m2md-image-copy.failed {
+  color: var(--error);
+  border-color: var(--error);
+}
+
 .table-link-refs {
   margin-top: var(--s2);
   font-family: var(--font-sans);
