@@ -43,4 +43,4 @@ COPY --from=build /app/dist ./dist/
 COPY .env ./
 
 EXPOSE ${PORT:-3001}
-CMD ["node", "server/index.js"]
+CMD ["node", "--env-file=.env", "server/index.js"]
