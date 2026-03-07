@@ -8,11 +8,6 @@ dist/
 .cache/
 ~/.cache/puppeteer/
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-
 # OS artifacts
 .DS_Store
 Thumbs.db
