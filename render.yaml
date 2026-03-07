@@ -4,10 +4,3 @@ services:
     name: m2m
     plan: free
     autoDeploy: true
-    envVars:
-      - key: PORT
-        value: 3001
-      - key: HOST
-        value: 0.0.0.0
-      - key: NODE_ENV
-        value: production

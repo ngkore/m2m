@@ -37,9 +37,10 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
-# Copy server code and built frontend
+# Copy server code, built frontend, and .env file
 COPY server/ ./server/
 COPY --from=build /app/dist ./dist/
+COPY .env ./
 
 EXPOSE ${PORT:-3001}
 CMD ["node", "server/index.js"]

@@ -52,11 +52,14 @@ A bidirectional converter between Markdown (`.md`) files and Medium articles.
 
 ### Environment variables
 
-| Variable      | Default     | Description                                                                                              |
-| ------------- | ----------- | -------------------------------------------------------------------------------------------------------- |
-| `PORT`        | `3001`      | API server port                                                                                          |
-| `PORT_CLIENT` | `5173`      | Vite dev server port                                                                                     |
-| `HOST`        | `localhost` | Bind address for both servers. Set to `0.0.0.0` to expose on the network (e.g. inside a VM or container) |
+Create a `.env` file in the root directory (this file is used by both the backend and Docker).
+
+| Variable       | Default                | Description                                                                                              |
+| -------------- | ---------------------- | -------------------------------------------------------------------------------------------------------- |
+| `PORT`         | `3001`                 | API server port                                                                                          |
+| `PORT_CLIENT`  | `5173`                 | Vite dev server port                                                                                     |
+| `HOST`         | `localhost`            | Bind address for both servers. Set to `0.0.0.0` to expose on the network (e.g. inside a VM or container) |
+| `FREEDIUM_URL` | `https://freedium.cfd` | Primary Freedium mirror for bypassing Medium paywalls                                                    |
 
 ## Building for Production
 
