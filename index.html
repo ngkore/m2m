@@ -179,7 +179,9 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+              <path
+                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+              ></path>
             </svg>
           </a>
 
@@ -339,9 +341,20 @@
 
             <div class="pane preview-pane">
               <div class="pane-header">
-                <div style="display: flex; align-items: baseline; gap: var(--s3);">
+                <div
+                  style="display: flex; align-items: baseline; gap: var(--s3)"
+                >
                   <h2>Medium Preview</h2>
-                  <span class="preview-stats" id="md-preview-stats" style="font-size: 0.8rem; color: var(--text-tertiary); font-variant-numeric: tabular-nums;">0 words • 0 chars</span>
+                  <span
+                    class="preview-stats"
+                    id="md-preview-stats"
+                    style="
+                      font-size: 0.8rem;
+                      color: var(--text-tertiary);
+                      font-variant-numeric: tabular-nums;
+                    "
+                    >0 words • 0 chars</span
+                  >
                 </div>
                 <div class="pane-actions">
                   <button
@@ -400,9 +413,9 @@
               <div class="convert-form-content">
                 <div class="convert-form-inner">
                   <p class="convert-description">
-                    Paste a Medium article URL below. We'll extract the content,
-                    download all images at full quality, and generate clean
-                    Markdown.
+                    Paste a Medium article URL. The tool will extract the
+                    content, download all images in full quality, and convert it
+                    to clean Markdown.
                   </p>
 
                   <form
@@ -459,8 +472,8 @@
                         title="Force the tool to fetch the latest version of this article"
                       >
                         <span class="bypass-cache-text"
-                          >Check this box <strong>only</strong> if the tool is loading outdated
-                          content.</span
+                          >Check this box <strong>only</strong> if the tool is
+                          loading outdated content.</span
                         >
                         <span class="bypass-cache-disclaimer"
                           >(Disclaimer: Cannot bypass Medium paywalls)</span
@@ -566,9 +579,44 @@
                       Paywall articles are fetched via
                       <strong>Freedium</strong>. If conversion fails on
                       paywalled posts, Freedium may have moved to a new domain —
-                      update <code>FREEDIUM_URL</code> in <code>.env</code> and
-                      restart the server.
+                      update <code>FREEDIUM_URL</code> in <code>.env</code> of
+                      repository.
                     </p>
+                  </div>
+
+                  <div
+                    class="delay-note"
+                    role="note"
+                    style="
+                      margin-bottom: var(--s4);
+                      font-size: 0.85rem;
+                      color: var(--text-secondary);
+                      background: var(--bg-surface-2);
+                      padding: var(--s3);
+                      border-radius: 6px;
+                      border-left: 3px solid var(--text-primary);
+                      display: flex;
+                      align-items: flex-start;
+                      gap: var(--s2);
+                    "
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                      aria-hidden="true"
+                      style="flex-shrink: 0; margin-top: 2px"
+                    >
+                      <path
+                        d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM0 8a8 8 0 1116 0A8 8 0 010 8zm8-3.25a.75.75 0 01.75.75v3.25H11a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75v-4a.75.75 0 01.75-.75z"
+                      />
+                    </svg>
+                    <span
+                      ><strong>Note:</strong> Fetching may take
+                      <b>several minutes</b> if the article contains multiple
+                      high-resolution images. Please be patient.</span
+                    >
                   </div>
                 </div>
                 <!-- /.convert-form-inner -->
@@ -580,9 +628,20 @@
             <!-- Right: Markdown Preview -->
             <div class="pane preview-pane">
               <div class="pane-header">
-                <div style="display: flex; align-items: baseline; gap: var(--s3);">
+                <div
+                  style="display: flex; align-items: baseline; gap: var(--s3)"
+                >
                   <h2>Markdown Preview</h2>
-                  <span class="preview-stats" id="m2md-preview-stats" style="font-size: 0.8rem; color: var(--text-tertiary); font-variant-numeric: tabular-nums;">0 words • 0 chars</span>
+                  <span
+                    class="preview-stats"
+                    id="m2md-preview-stats"
+                    style="
+                      font-size: 0.8rem;
+                      color: var(--text-tertiary);
+                      font-variant-numeric: tabular-nums;
+                    "
+                    >0 words • 0 chars</span
+                  >
                 </div>
                 <div class="pane-actions">
                   <button
@@ -629,32 +688,81 @@
       </main>
 
       <!-- Upload Modal Overlay -->
-      <div class="modal-overlay" id="upload-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+      <div
+        class="modal-overlay"
+        id="upload-modal"
+        hidden
+        aria-hidden="true"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upload-modal-title"
+      >
         <div class="modal-content">
           <div class="modal-header">
             <h3 id="upload-modal-title">Upload Markdown</h3>
-            <button class="btn-close" id="close-upload-modal" aria-label="Close modal">&times;</button>
+            <button
+              class="btn-close"
+              id="close-upload-modal"
+              aria-label="Close modal"
+            >
+              &times;
+            </button>
           </div>
           <div class="modal-body">
             <div id="upload-modal-default">
-              <p class="modal-text">To preserve local images (like <code>![img](./pic.png)</code>), please upload the entire folder instead of a single file.</p>
+              <p class="modal-text">
+                To preserve local images (like <code>![img](./pic.png)</code>),
+                please upload the entire folder instead of a single file.
+              </p>
               <div class="modal-actions">
                 <label class="btn btn-primary" tabindex="0">
                   Upload File(s)
-                  <input type="file" accept=".md,.markdown,.txt,image/*" id="file-input" multiple hidden />
+                  <input
+                    type="file"
+                    accept=".md,.markdown,.txt,image/*"
+                    id="file-input"
+                    multiple
+                    hidden
+                  />
                 </label>
                 <label class="btn btn-secondary" tabindex="0">
                   Upload Folder
-                  <input type="file" webkitdirectory directory id="folder-input" hidden />
+                  <input
+                    type="file"
+                    webkitdirectory
+                    directory
+                    id="folder-input"
+                    hidden
+                  />
                 </label>
               </div>
             </div>
 
             <div id="upload-modal-selection" hidden>
-              <p class="modal-text" style="margin-bottom: var(--s3);">Multiple Markdown files found. Select one to load:</p>
-              <div id="upload-modal-file-list" style="display: flex; flex-direction: column; gap: var(--s2); max-height: 200px; overflow-y: auto; padding-right: 8px;"></div>
-              <div style="margin-top: var(--s4); display: flex; justify-content: flex-end;">
-                 <button class="btn btn-ghost" id="upload-modal-cancel">Back</button>
+              <p class="modal-text" style="margin-bottom: var(--s3)">
+                Multiple Markdown files found. Select one to load:
+              </p>
+              <div
+                id="upload-modal-file-list"
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: var(--s2);
+                  max-height: 200px;
+                  overflow-y: auto;
+                  padding-right: 8px;
+                "
+              ></div>
+              <div
+                style="
+                  margin-top: var(--s4);
+                  display: flex;
+                  justify-content: flex-end;
+                "
+              >
+                <button class="btn btn-ghost" id="upload-modal-cancel">
+                  Back
+                </button>
               </div>
             </div>
           </div>
