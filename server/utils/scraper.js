@@ -88,7 +88,8 @@ export async function scrapeArticle(url) {
   }
 
   // Strategy 2: Freedium mirrors
-  if (!html) {
+  const isBypass = url.includes('refresh=');
+  if (!html && !isBypass) {
     for (const mirror of FREEDIUM_MIRRORS) {
       try {
         const freediumUrl = `${mirror}/${cleanUrl}`;
@@ -207,10 +208,41 @@ function parseArticleHtml(html, sourceUrl = '') {
       el.find(
         'button, nav, footer, header, ' +
         '[data-testid="headerNav"], [data-testid="publicationFooter"], ' +
+        '[data-testid="authorName"], ' + // Remove author/date blocks
         '.js-postMetaLock498, script, style, noscript, ' +
         '.pw-header, .pw-footer, .post-actions, ' +
-        '.social-share, .related-posts, .newsletter-signup'
+        '.social-share, .related-posts, .newsletter-signup, ' +
+        'a[href*="/m/signin"], a[href*="source=author_header"], ' +
+        'a[href*="source=post_page---byline"], a[href*="source=post_actions_header"]'
       ).remove();
+
+      // Advanced textual removals for footers/metadata
+      el.find('*').filter((i, filterEl) => {
+        const t = $(filterEl).text().replace(/\s+/g, ' ').trim();
+        
+        // Match the newsletter heading and its accompanying paragraph
+        if ($(filterEl).is('h2') && /Get .* inbox/i.test(t)) return true;
+        if ($(filterEl).is('p') && /Join Medium for free/i.test(t)) return true;
+        
+        // Remove "Listen", "Share", bullets, sign-in noise, read times, exact dates, and paywall badges
+        if (
+          t === 'Listen' || t === 'Share' || t === '·' || 
+          t === 'Remember me for faster sign in' ||
+          t === 'Member-only story' ||
+          /^\d+\smin read$/.test(t) || 
+          /^[A-Z][a-z]{2}\s\d{1,2},\s\d{4}$/.test(t)
+        ) return true;
+        
+        // Remove stray horizontal lines often used as dividers
+        if (/^-{2,3}$|^—{1,2}$/.test(t)) return true;
+        
+        return false;
+      }).remove();
+
+      // The title is already extracted above and injected during markdown generation,
+      // so we remove it here to avoid duplication in the final MD output.
+      el.find('h1.pw-post-title, h1').first().remove();
+
       articleHtml = el.html();
       break;
     }

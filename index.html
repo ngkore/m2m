@@ -158,50 +158,76 @@
           </button>
         </nav>
 
-        <!-- Theme Toggle -->
-        <button
-          class="theme-toggle"
-          id="theme-toggle"
-          title="Toggle light/dark theme"
-          aria-label="Toggle light and dark theme"
-        >
-          <svg
-            class="theme-icon sun"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            aria-hidden="true"
-            focusable="false"
+        <!-- Header Actions -->
+        <div class="header-actions">
+          <a
+            href="https://github.com/ngkore/m2m"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="header-btn"
+            title="Star on GitHub"
+            aria-label="Star on GitHub"
           >
-            <circle cx="12" cy="12" r="5" />
-            <line x1="12" y1="1" x2="12" y2="3" />
-            <line x1="12" y1="21" x2="12" y2="23" />
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-            <line x1="1" y1="12" x2="3" y2="12" />
-            <line x1="21" y1="12" x2="23" y2="12" />
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-          </svg>
-          <svg
-            class="theme-icon moon"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            aria-hidden="true"
-            focusable="false"
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+          </a>
+
+          <!-- Theme Toggle -->
+          <button
+            class="header-btn theme-toggle"
+            id="theme-toggle"
+            title="Toggle light/dark theme"
+            aria-label="Toggle light and dark theme"
           >
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-          </svg>
-        </button>
+            <svg
+              class="theme-icon sun"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+            <svg
+              class="theme-icon moon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       <!-- Main content — single <main> wraps both tab panels -->
@@ -221,7 +247,7 @@
                   <button
                     class="btn btn-sm btn-ghost"
                     id="clear-btn"
-                    title="Clear editor"
+                    data-tooltip="Clear editor"
                     aria-label="Clear editor"
                   >
                     Clear
@@ -229,27 +255,19 @@
                   <button
                     class="btn btn-sm btn-ghost"
                     id="reformat-btn"
-                    title="Reformat Markdown"
+                    data-tooltip="Reformat Markdown"
                     aria-label="Reformat Markdown"
                   >
                     Reformat
                   </button>
-                  <label
+                  <button
                     class="btn btn-sm btn-ghost"
                     id="upload-btn"
-                    tabindex="0"
-                    title="Upload a Markdown file"
+                    data-tooltip="Upload a Markdown file"
                     aria-label="Upload a Markdown file"
                   >
-                    Upload .md
-                    <input
-                      type="file"
-                      accept=".md,.markdown,.txt"
-                      id="file-input"
-                      aria-label="Choose a Markdown file to upload"
-                      hidden
-                    />
-                  </label>
+                    Upload
+                  </button>
                 </div>
               </div>
 
@@ -321,14 +339,31 @@
 
             <div class="pane preview-pane">
               <div class="pane-header">
-                <h2>Medium Preview</h2>
+                <div style="display: flex; align-items: baseline; gap: var(--s3);">
+                  <h2>Medium Preview</h2>
+                  <span class="preview-stats" id="md-preview-stats" style="font-size: 0.8rem; color: var(--text-tertiary); font-variant-numeric: tabular-nums;">0 words • 0 chars</span>
+                </div>
                 <div class="pane-actions">
-                  <button class="btn btn-sm btn-ghost" id="export-html-btn" title="Export as HTML file" aria-label="Export preview as HTML">HTML</button>
-                  <button class="btn btn-sm btn-ghost" id="export-pdf-btn" title="Export as PDF" aria-label="Export preview as PDF">PDF</button>
+                  <button
+                    class="btn btn-sm btn-ghost"
+                    id="export-html-btn"
+                    title="Export as HTML file"
+                    aria-label="Export preview as HTML"
+                  >
+                    HTML
+                  </button>
+                  <button
+                    class="btn btn-sm btn-ghost"
+                    id="export-pdf-btn"
+                    data-tooltip="Export as PDF"
+                    aria-label="Export preview as PDF"
+                  >
+                    PDF
+                  </button>
                   <button
                     class="btn btn-sm btn-accent"
                     id="copy-btn"
-                    title="Copy as Medium HTML"
+                    data-tooltip="Copy HTML"
                     aria-label="Copy rendered HTML for Medium"
                   >
                     Copy
@@ -364,125 +399,179 @@
               </div>
               <div class="convert-form-content">
                 <div class="convert-form-inner">
-                <p class="convert-description">
-                  Paste a Medium article URL below. We'll extract the content,
-                  download all images at full quality, and generate clean
-                  Markdown.
-                </p>
+                  <p class="convert-description">
+                    Paste a Medium article URL below. We'll extract the content,
+                    download all images at full quality, and generate clean
+                    Markdown.
+                  </p>
 
-                <form
-                  class="url-form"
-                  id="url-form"
-                  aria-label="Convert Medium article to Markdown"
-                >
-                  <div class="input-group">
+                  <form
+                    class="url-form"
+                    id="url-form"
+                    aria-label="Convert Medium article to Markdown"
+                  >
+                    <div class="input-group">
+                      <svg
+                        class="input-icon"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path
+                          d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm2.45 5.45a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 11-2.83-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25z"
+                        />
+                      </svg>
+                      <input
+                        type="url"
+                        class="url-input"
+                        id="url-input"
+                        placeholder="https://medium.com/@username/article-title-abc123"
+                        aria-label="Medium article URL"
+                        required
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      class="btn btn-primary btn-convert"
+                      id="convert-btn"
+                      aria-label="Convert Medium article to Markdown"
+                    >
+                      <span class="btn-text">Convert to Markdown</span>
+                      <span class="btn-loader" hidden aria-hidden="true">
+                        <span class="spinner"></span>
+                        Converting...
+                      </span>
+                    </button>
+
+                    <div class="bypass-cache-container">
+                      <input
+                        type="checkbox"
+                        id="bypass-cache-checkbox"
+                        class="bypass-cache-checkbox"
+                      />
+                      <label
+                        for="bypass-cache-checkbox"
+                        class="bypass-cache-label"
+                        title="Force the tool to fetch the latest version of this article"
+                      >
+                        <span class="bypass-cache-text"
+                          >Check this box <strong>only</strong> if the tool is loading outdated
+                          content.</span
+                        >
+                        <span class="bypass-cache-disclaimer"
+                          >(Disclaimer: Cannot bypass Medium paywalls)</span
+                        >
+                      </label>
+                    </div>
+                  </form>
+
+                  <!-- Progress -->
+                  <div
+                    class="progress-section"
+                    id="progress-section"
+                    role="status"
+                    aria-live="polite"
+                    aria-label="Conversion progress"
+                    hidden
+                  >
+                    <div
+                      class="progress-bar"
+                      role="progressbar"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                    >
+                      <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p class="progress-text" id="progress-text">
+                      Fetching article...
+                    </p>
+                  </div>
+
+                  <!-- Error -->
+                  <div
+                    class="error-message"
+                    id="error-message"
+                    role="alert"
+                    aria-live="assertive"
+                    hidden
+                  >
                     <svg
-                      class="input-icon"
-                      width="16"
-                      height="16"
+                      class="error-icon"
+                      width="15"
+                      height="15"
                       viewBox="0 0 16 16"
                       fill="currentColor"
                       aria-hidden="true"
                       focusable="false"
                     >
                       <path
-                        d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm2.45 5.45a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 11-2.83-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25z"
+                        d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 11.5a.75.75 0 110-1.5.75.75 0 010 1.5zm-.75-8.25a.75.75 0 011.5 0v4.5a.75.75 0 01-1.5 0V4.25z"
                       />
                     </svg>
-                    <input
-                      type="url"
-                      class="url-input"
-                      id="url-input"
-                      placeholder="https://medium.com/@username/article-title-abc123"
-                      aria-label="Medium article URL"
-                      required
-                    />
+                    <span id="error-text"></span>
                   </div>
-                  <button
-                    type="submit"
-                    class="btn btn-primary btn-convert"
-                    id="convert-btn"
-                    aria-label="Convert Medium article to Markdown"
-                  >
-                    <span class="btn-text">Convert to Markdown</span>
-                    <span class="btn-loader" hidden aria-hidden="true">
-                      <span class="spinner"></span>
-                      Converting...
-                    </span>
-                  </button>
-                </form>
 
-                <!-- Progress -->
-                <div
-                  class="progress-section"
-                  id="progress-section"
-                  role="status"
-                  aria-live="polite"
-                  aria-label="Conversion progress"
-                  hidden
-                >
-                  <div
-                    class="progress-bar"
-                    role="progressbar"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                  >
-                    <div class="progress-fill" id="progress-fill"></div>
-                  </div>
-                  <p class="progress-text" id="progress-text">
-                    Fetching article...
-                  </p>
-                </div>
-
-                <!-- Error -->
-                <div
-                  class="error-message"
-                  id="error-message"
-                  role="alert"
-                  aria-live="assertive"
-                  hidden
-                >
-                  <svg class="error-icon" width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
-                    <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 11.5a.75.75 0 110-1.5.75.75 0 010 1.5zm-.75-8.25a.75.75 0 011.5 0v4.5a.75.75 0 01-1.5 0V4.25z"/>
-                  </svg>
-                  <span id="error-text"></span>
-                </div>
-
-                <!-- Download -->
-                <div class="download-section" id="download-section" hidden>
-                  <div class="download-card">
-                    <div class="download-card-header">
-                      <div class="download-card-text">
-                        <h3>Conversion complete</h3>
-                        <p>
-                          ZIP contains the Markdown file and an images folder.
-                        </p>
+                  <!-- Download -->
+                  <div class="download-section" id="download-section" hidden>
+                    <div class="download-card">
+                      <div class="download-card-header">
+                        <div class="download-card-text">
+                          <h3>Conversion complete</h3>
+                          <p>
+                            ZIP contains the Markdown file and an images folder.
+                          </p>
+                        </div>
+                        <button
+                          class="btn btn-success"
+                          id="download-btn"
+                          aria-label="Download converted Markdown as ZIP"
+                        >
+                          <svg
+                            width="13"
+                            height="13"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path
+                              d="M2.75 14A1.75 1.75 0 011 12.25v-2.5a.75.75 0 011.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 00.25-.25v-2.5a.75.75 0 011.5 0v2.5A1.75 1.75 0 0113.25 14H2.75zM7.25 7.69V2a.75.75 0 011.5 0v5.69l1.97-1.97a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 6.78a.75.75 0 011.06-1.06l1.97 1.97z"
+                            />
+                          </svg>
+                          Download ZIP
+                        </button>
                       </div>
-                      <button
-                        class="btn btn-success"
-                        id="download-btn"
-                        aria-label="Download converted Markdown as ZIP"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
-                          <path d="M2.75 14A1.75 1.75 0 011 12.25v-2.5a.75.75 0 011.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 00.25-.25v-2.5a.75.75 0 011.5 0v2.5A1.75 1.75 0 0113.25 14H2.75zM7.25 7.69V2a.75.75 0 011.5 0v5.69l1.97-1.97a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 6.78a.75.75 0 011.06-1.06l1.97 1.97z"/>
-                        </svg>
-                        Download ZIP
-                      </button>
                     </div>
                   </div>
+                  <!-- Freedium note -->
+                  <div class="freedium-note" role="note">
+                    <svg
+                      class="freedium-note-icon"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a.75.75 0 110 1.5A.75.75 0 018 3zm-.25 3.25a.75.75 0 011.5 0v4.5a.75.75 0 01-1.5 0v-4.5z"
+                      />
+                    </svg>
+                    <p>
+                      Paywall articles are fetched via
+                      <strong>Freedium</strong>. If conversion fails on
+                      paywalled posts, Freedium may have moved to a new domain —
+                      update <code>FREEDIUM_URL</code> in <code>.env</code> and
+                      restart the server.
+                    </p>
+                  </div>
                 </div>
-                <!-- Freedium note -->
-                <div class="freedium-note" role="note">
-                  <svg class="freedium-note-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
-                    <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a.75.75 0 110 1.5A.75.75 0 018 3zm-.25 3.25a.75.75 0 011.5 0v4.5a.75.75 0 01-1.5 0v-4.5z"/>
-                  </svg>
-                  <p>
-                    Paywall articles are fetched via <strong>Freedium</strong>. If conversion
-                    fails on paywalled posts, Freedium may have moved to a new domain — update
-                    <code>FREEDIUM_URL</code> in <code>.env</code> and restart the server.
-                  </p>
-                </div>
-                </div><!-- /.convert-form-inner -->
+                <!-- /.convert-form-inner -->
               </div>
             </div>
 
@@ -491,14 +580,33 @@
             <!-- Right: Markdown Preview -->
             <div class="pane preview-pane">
               <div class="pane-header">
-                <h2>Markdown Preview</h2>
+                <div style="display: flex; align-items: baseline; gap: var(--s3);">
+                  <h2>Markdown Preview</h2>
+                  <span class="preview-stats" id="m2md-preview-stats" style="font-size: 0.8rem; color: var(--text-tertiary); font-variant-numeric: tabular-nums;">0 words • 0 chars</span>
+                </div>
                 <div class="pane-actions">
-                  <button class="btn btn-sm btn-ghost" id="m2md-export-html-btn" title="Export as HTML file" aria-label="Export preview as HTML" disabled>HTML</button>
-                  <button class="btn btn-sm btn-ghost" id="m2md-export-pdf-btn" title="Export as PDF" aria-label="Export preview as PDF" disabled>PDF</button>
+                  <button
+                    class="btn btn-sm btn-ghost"
+                    id="m2md-export-html-btn"
+                    title="Export as HTML file"
+                    aria-label="Export preview as HTML"
+                    disabled
+                  >
+                    HTML
+                  </button>
+                  <button
+                    class="btn btn-sm btn-ghost"
+                    id="m2md-export-pdf-btn"
+                    data-tooltip="Export as PDF"
+                    aria-label="Export preview as PDF"
+                    disabled
+                  >
+                    PDF
+                  </button>
                   <button
                     class="btn btn-sm btn-accent"
                     id="m2md-copy-btn"
-                    title="Copy Markdown"
+                    data-tooltip="Copy Markdown"
                     aria-label="Copy converted Markdown to clipboard"
                     disabled
                   >
@@ -519,6 +627,39 @@
           </div>
         </section>
       </main>
+
+      <!-- Upload Modal Overlay -->
+      <div class="modal-overlay" id="upload-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="upload-modal-title">Upload Markdown</h3>
+            <button class="btn-close" id="close-upload-modal" aria-label="Close modal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div id="upload-modal-default">
+              <p class="modal-text">To preserve local images (like <code>![img](./pic.png)</code>), please upload the entire folder instead of a single file.</p>
+              <div class="modal-actions">
+                <label class="btn btn-primary" tabindex="0">
+                  Upload File(s)
+                  <input type="file" accept=".md,.markdown,.txt,image/*" id="file-input" multiple hidden />
+                </label>
+                <label class="btn btn-secondary" tabindex="0">
+                  Upload Folder
+                  <input type="file" webkitdirectory directory id="folder-input" hidden />
+                </label>
+              </div>
+            </div>
+
+            <div id="upload-modal-selection" hidden>
+              <p class="modal-text" style="margin-bottom: var(--s3);">Multiple Markdown files found. Select one to load:</p>
+              <div id="upload-modal-file-list" style="display: flex; flex-direction: column; gap: var(--s2); max-height: 200px; overflow-y: auto; padding-right: 8px;"></div>
+              <div style="margin-top: var(--s4); display: flex; justify-content: flex-end;">
+                 <button class="btn btn-ghost" id="upload-modal-cancel">Back</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="/src/main.js"></script>

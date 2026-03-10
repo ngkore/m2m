@@ -277,7 +277,7 @@ app.post('/api/convert-md', async (req, res) => {
 /** Serve a previously-generated ZIP (single-use, expires after 15 min). */
 app.get('/api/download-zip/:token', (req, res) => {
   const entry = zipCache.get(req.params.token);
-  if (!entry) {
+  if (!entry || entry.isPdf) {
     return res.status(404).json({ error: 'ZIP not found or expired. Please convert the article again.' });
   }
 
@@ -285,6 +285,38 @@ app.get('/api/download-zip/:token', (req, res) => {
 
   res.setHeader('Content-Type', 'application/zip');
   res.setHeader('Content-Disposition', `attachment; filename="${entry.slug}.zip"`);
+  res.setHeader('Content-Length', entry.buffer.length);
+  res.end(entry.buffer);
+});
+
+/** Upload a client-generated PDF for secure download fallback. */
+app.post('/api/upload-pdf', (req, res) => {
+  const { base64Data, filename } = req.body;
+  if (!base64Data || !filename) {
+    return res.status(400).json({ error: 'Missing PDF data or filename' });
+  }
+
+  try {
+    const buffer = Buffer.from(base64Data, 'base64');
+    const token = randomUUID();
+    zipCache.set(token, { buffer, filename, isPdf: true, expiresAt: Date.now() + 15 * 60_000 });
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to process PDF' });
+  }
+});
+
+/** Serve a previously-uploaded PDF (single-use). */
+app.get('/api/download-pdf/:token', (req, res) => {
+  const entry = zipCache.get(req.params.token);
+  if (!entry || !entry.isPdf) {
+    return res.status(404).json({ error: 'PDF not found or expired.' });
+  }
+
+  zipCache.delete(req.params.token);
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${entry.filename}"`);
   res.setHeader('Content-Length', entry.buffer.length);
   res.end(entry.buffer);
 });

@@ -111,6 +111,7 @@ themeToggle.addEventListener('click', () => {
 
 const urlForm = document.getElementById('url-form');
 const urlInput = document.getElementById('url-input');
+const bypassCacheCheckbox = document.getElementById('bypass-cache-checkbox');
 const convertBtn = document.getElementById('convert-btn');
 const progressSection = document.getElementById('progress-section');
 const progressFill = document.getElementById('progress-fill');
@@ -138,6 +139,7 @@ function preprocessForMedium(markdown) {
   // Task lists → Unicode checkboxes
   md = md.replace(/^(\s*[-*+]\s+)\[[ ]\]/gm, '$1☐');
   md = md.replace(/^(\s*[-*+]\s+)\[[xX]\]/gm, '$1☑');
+
 
   // Footnotes: collect definitions, replace refs with superscript numbers
   const footnoteDefs = {};
@@ -534,7 +536,7 @@ function convertTablesToImages(container) {
       const refItems = result.links.map(
         (link) => `<a href="${link.href}" target="_blank" rel="noopener" class="ref-link">[${link.index}]</a>`
       );
-      refDiv.innerHTML = `<span class="ref-label">Reference:</span> ${refItems.join(', ')}`;
+      refDiv.innerHTML = `<strong><em>Reference:</em></strong> <em>${refItems.join(', ')}</em>`;
       wrapper.appendChild(refDiv);
     }
 
@@ -546,18 +548,28 @@ function convertTablesToImages(container) {
 // Live Markdown Preview
 // ───────────────────────────────────────
 
+function updateWordCharStats(text, elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const safeText = text || '';
+  const chars = safeText.length;
+  const words = safeText.trim() ? safeText.trim().split(/\s+/).length : 0;
+  el.textContent = `${words.toLocaleString()} words • ${chars.toLocaleString()} chars`;
+}
+
 function renderPreview() {
   const md = markdownInput.value.trim();
 
   if (!md) {
     previewContent.innerHTML = `<div class="preview-placeholder"><p>Your preview will appear here</p></div>`;
+    updateWordCharStats('', 'md-preview-stats');
     return;
   }
 
   previewContent.innerHTML = `<div class="medium-preview">${marked.parse(preprocessForMedium(md))}</div>`;
 
-
   convertTablesToImages(previewContent);
+  updateWordCharStats(previewContent.innerText || '', 'md-preview-stats');
 }
 
 // Debounced preview
@@ -601,19 +613,127 @@ previewContent.addEventListener('scroll', () => {
 // File Upload
 // ───────────────────────────────────────
 
-fileInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+const uploadBtn = document.getElementById('upload-btn');
+const uploadModal = document.getElementById('upload-modal');
+const closeUploadModal = document.getElementById('close-upload-modal');
+const folderInput = document.getElementById('folder-input');
 
+uploadBtn.addEventListener('click', () => {
+  uploadModal.hidden = false;
+  const uploadModalDefault = document.getElementById('upload-modal-default');
+  const uploadModalSelection = document.getElementById('upload-modal-selection');
+  if (uploadModalDefault) uploadModalDefault.hidden = false;
+  if (uploadModalSelection) uploadModalSelection.hidden = true;
+});
+closeUploadModal.addEventListener('click', () => {
+  uploadModal.hidden = true;
+});
+uploadModal.addEventListener('click', (e) => {
+  if (e.target === uploadModal) uploadModal.hidden = true;
+});
+
+const uploadModalDefault = document.getElementById('upload-modal-default');
+const uploadModalSelection = document.getElementById('upload-modal-selection');
+const uploadModalFileList = document.getElementById('upload-modal-file-list');
+const uploadModalCancel = document.getElementById('upload-modal-cancel');
+
+if (uploadModalCancel) {
+  uploadModalCancel.addEventListener('click', () => {
+    if (uploadModalSelection) uploadModalSelection.hidden = true;
+    if (uploadModalDefault) uploadModalDefault.hidden = false;
+  });
+}
+
+function handleMarkdownUpload(filesList) {
+  const files = Array.from(filesList);
+  if (!files.length) return;
+
+  if (fileInput) fileInput.value = '';
+  if (folderInput) folderInput.value = '';
+
+  const mdFiles = files.filter(f => f.name.match(/\.(md|markdown|txt)$/i));
+
+  if (mdFiles.length === 0) {
+    alert("No Markdown (.md, .markdown, .txt) files were found in the selected folder.");
+    return;
+  }
+
+  const otherFiles = files.filter(f => f.type.startsWith('image/'));
+  const fileMap = {};
+  otherFiles.forEach(f => {
+    if (f.webkitRelativePath) fileMap[f.webkitRelativePath] = f;
+    fileMap[f.name] = f;
+  });
+
+  if (mdFiles.length > 1 && uploadModalDefault && uploadModalSelection && uploadModalFileList) {
+    uploadModalDefault.hidden = true;
+    uploadModalSelection.hidden = false;
+    uploadModalFileList.innerHTML = '';
+    
+    mdFiles.forEach((mdFile) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-secondary';
+      btn.style.display = 'block';
+      btn.style.width = '100%';
+      btn.style.textAlign = 'left';
+      btn.style.fontWeight = '500';
+      btn.style.overflow = 'hidden';
+      btn.style.textOverflow = 'ellipsis';
+      btn.style.whiteSpace = 'nowrap';
+      
+      const displayName = mdFile.name;
+      btn.textContent = displayName;
+      
+      btn.onclick = () => {
+        uploadModalSelection.hidden = true;
+        uploadModalDefault.hidden = false;
+        processMarkdownFile(mdFile, fileMap);
+      };
+      
+      uploadModalFileList.appendChild(btn);
+    });
+    return;
+  }
+
+  processMarkdownFile(mdFiles[0], fileMap);
+}
+
+function processMarkdownFile(mdFile, fileMap) {
   const reader = new FileReader();
   reader.onload = (ev) => {
-    markdownInput.value = ev.target.result;
-    renderPreview();
-  };
-  reader.readAsText(file);
+    let content = ev.target.result;
+    
+    content = content.replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, (match, alt, src) => {
+      if (/^(https?:|data:)/.test(src)) return match;
+      
+      let matchedFile = null;
+      const cleanSrc = src.replace(/^\.\//, '');
+      const possiblePathMatches = Object.keys(fileMap).filter(path => path.endsWith(cleanSrc));
+      
+      if (possiblePathMatches.length > 0) {
+        matchedFile = fileMap[possiblePathMatches[0]];
+      } else {
+        const filename = src.split('/').pop();
+        if (fileMap[filename]) matchedFile = fileMap[filename];
+      }
 
-  fileInput.value = '';
-});
+      if (matchedFile) {
+        const blobUrl = URL.createObjectURL(matchedFile);
+        previewBlobUrls.push(blobUrl);
+        return `![${alt}](${blobUrl})`;
+      }
+      return match;
+    });
+
+    markdownInput.value = content;
+    renderPreview();
+    uploadModal.hidden = true;
+  };
+  reader.readAsText(mdFile);
+}
+
+fileInput.addEventListener('change', (e) => handleMarkdownUpload(e.target.files));
+if (folderInput) folderInput.addEventListener('change', (e) => handleMarkdownUpload(e.target.files));
 
 // ───────────────────────────────────────
 // Reformat Markdown
@@ -822,6 +942,108 @@ function convertAdmonitionsForMedium(markdown) {
   );
 }
 
+/**
+ * Transform list hierarchy in HTML for Medium copy-paste.
+ * Case 1: Flat bullets only → keep as-is.
+ * Case 2: 2 levels → top-level = <ol>, sub-items = <ul>.
+ * Case 3: 3 levels → top-level = <ol>, sub = <ul>, sub-sub items get a) b) c) prefixes.
+ */
+function transformListsForMedium(html) {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+
+  // Find all top-level lists (not nested inside another list)
+  const allLists = tempDiv.querySelectorAll('ul, ol');
+  const topLists = Array.from(allLists).filter(list => list.parentElement.closest('ul, ol') === null);
+
+  topLists.forEach((list) => {
+    // Determine maximum nesting depth
+    const maxDepth = getMaxDepth(list, 1);
+
+    if (maxDepth === 1) {
+      // Case 1: flat bullets — keep original format, no transformation
+      return;
+    }
+
+    // Convert nested <ol> to <ul> at depth 2
+    const depth2Lists = list.querySelectorAll(':scope > li > ul, :scope > li > ol');
+    depth2Lists.forEach((nested) => {
+      // Force depth 2 to be UL
+      if (nested.tagName === 'OL') {
+        const ul = document.createElement('ul');
+        while (nested.firstChild) ul.appendChild(nested.firstChild);
+        Array.from(nested.attributes).forEach(a => ul.setAttribute(a.name, a.value));
+        nested.replaceWith(ul);
+        nested = ul;
+      }
+      
+      // Flatten depth 3+ continuously into depth 2
+      let deepList;
+      while ((deepList = nested.querySelector('ul, ol')) !== null) {
+         const parentLi = deepList.closest('li');
+         const items = Array.from(deepList.children).filter(c => c.tagName === 'LI');
+         
+         let currentLi = parentLi;
+         items.forEach((li, idx) => {
+             const letter = String.fromCharCode(97 + (idx % 26));
+             const firstEl = li.firstElementChild;
+             if (firstEl && (firstEl.tagName === 'P' || firstEl.tagName === 'DIV' || firstEl.tagName === 'SPAN')) {
+                 firstEl.insertAdjacentHTML('afterbegin', `<strong>${letter})</strong> `);
+             } else {
+                 li.insertAdjacentHTML('afterbegin', `<strong>${letter})</strong> `);
+             }
+             
+             // Move to depth 2 as sibling of parentLi to flatten nesting
+             currentLi.insertAdjacentElement('afterend', li);
+             currentLi = li;
+         });
+         deepList.remove();
+      }
+    });
+
+    // Map top-level list arrays into explicit physical DOM paragraph nodes for strict persistent formatting
+    const items = Array.from(list.children).filter(c => c.tagName === 'LI');
+    items.forEach((li, idx) => {
+        const nestedList = li.querySelector(':scope > ul, :scope > ol');
+        
+        const hasBlock = Array.from(li.children).some(c => c.tagName === 'P' || c.tagName === 'DIV' || c.tagName === 'BLOCKQUOTE');
+        const wrapper = document.createElement(hasBlock ? 'div' : 'p');
+        
+        Array.from(li.childNodes).forEach(child => {
+            if (child !== nestedList) {
+                wrapper.appendChild(child);
+            }
+        });
+
+        const firstEl = wrapper.firstElementChild;
+        if (firstEl && (firstEl.tagName === 'P' || firstEl.tagName === 'DIV' || firstEl.tagName === 'SPAN')) {
+            firstEl.insertAdjacentHTML('afterbegin', `<strong>${idx + 1}.</strong> `);
+        } else {
+            wrapper.insertAdjacentHTML('afterbegin', `<strong>${idx + 1}.</strong> `);
+        }
+
+        list.parentNode.insertBefore(wrapper, list);
+        if (nestedList) {
+            list.parentNode.insertBefore(nestedList, list);
+        }
+    });
+    list.remove();
+  });
+
+  return tempDiv.innerHTML;
+}
+
+function getMaxDepth(listEl, currentDepth) {
+  let max = currentDepth;
+  listEl.querySelectorAll(':scope > li').forEach((li) => {
+    li.querySelectorAll(':scope > ul, :scope > ol').forEach((nested) => {
+      const d = getMaxDepth(nested, currentDepth + 1);
+      if (d > max) max = d;
+    });
+  });
+  return max;
+}
+
 /** Build Medium-compatible HTML, replacing tables with base64 image tags. */
 function buildMediumHtml(markdown) {
   let html = marked.parse(preprocessForMedium(markdown));
@@ -848,7 +1070,7 @@ function buildMediumHtml(markdown) {
           const refItems = tableImages[idx].links.map(
             (link) => `<a href="${link.href}">[${link.index}]</a>`
           );
-          refDiv.innerHTML = `Reference: ${refItems.join(', ')}`;
+          refDiv.innerHTML = `<strong><em>Reference:</em></strong> <em>${refItems.join(', ')}</em>`;
           refDiv.style.fontSize = '13px';
           refDiv.style.color = '#666';
           container.appendChild(refDiv);
@@ -860,6 +1082,9 @@ function buildMediumHtml(markdown) {
 
     html = tempDiv.innerHTML;
   }
+
+  // Transform list hierarchy for Medium paste
+  html = transformListsForMedium(html);
 
   return html;
 }
@@ -881,10 +1106,11 @@ copyBtn.addEventListener('click', async () => {
     ]);
     success = true;
   } catch (_) {
-    // Attempt 2: clone live preview DOM and execCommand('copy')
+    // Attempt 2: clone post-processed HTML into DOM and execCommand('copy')
     try {
-      const clone = previewContent.cloneNode(true);
-      clone.querySelectorAll('.table-image-badge, .ref-label').forEach((el) => el.remove());
+      const clone = document.createElement('div');
+      clone.className = 'medium-preview';
+      clone.innerHTML = html;
       clone.style.cssText = 'position:fixed;top:-9999px;left:-9999px;white-space:pre-wrap';
       document.body.appendChild(clone);
       const range = document.createRange();
@@ -997,6 +1223,33 @@ function downloadHtml(htmlContent, filename) {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+async function fallbackPdfDownload(pdf, filename) {
+  try {
+    const dataUri = pdf.output('datauristring');
+    const base64Str = dataUri.split(',')[1];
+    const res = await fetch('/api/upload-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base64Data: base64Str, filename })
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const { token } = await res.json();
+    if (token) {
+      const a = document.createElement('a');
+      a.href = `/api/download-pdf/${token}`;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      pdf.save(filename);
+    }
+  } catch (err) {
+    console.warn('PDF upload fallback failed:', err);
+    pdf.save(filename); // Try final browser save if network fails
+  }
 }
 
 async function exportToPdf(paneEl, filename, btnEl) {
@@ -1122,6 +1375,10 @@ async function exportToPdf(paneEl, filename, btnEl) {
       color: ${isDark ? '#93c5fd' : '#1e40af'};
       border: 1px solid ${isDark ? '#2d5a8e' : '#bfdbfe'};
       border-radius: ${resolve('--r-sm') || '3px'};
+      display: inline-block;
+      max-width: 100%;
+      word-break: break-word;
+      white-space: pre-wrap;
     }
     ${S} pre {
       background: ${isDark ? '#0a0a0a' : '#171717'} !important;
@@ -1216,7 +1473,7 @@ async function exportToPdf(paneEl, filename, btnEl) {
     /* ── Table images ────────────────────── */
     ${S} .table-image-wrapper { display: block; margin: ${resolve('--s6') || '24px'} 0; max-width: 100%; }
     ${S} .table-image-wrapper img { margin: 0; border-radius: ${resolve('--r-sm') || '3px'}; }
-    ${S} .table-image-badge, ${S} .table-image-copy, ${S} .m2md-image-copy, ${S} .ref-label { display: none !important; }
+    ${S} .table-image-badge, ${S} .table-image-copy, ${S} .m2md-image-copy { display: none !important; }
 
     /* ── Highlight.js ────────────────────── */
     ${S} .hljs { background: transparent !important; }
@@ -1226,7 +1483,7 @@ async function exportToPdf(paneEl, filename, btnEl) {
   const clone = inner.cloneNode(true);
   clone.style.cssText = 'width:100%;max-width:100%;margin:0;padding:0;';
 
-  // Replace native list markers with DOM spans (html2canvas can't render ::marker)
+  // Map native list CSS markers into distinct physical DOM span elements for deterministic canvas rasterization
   function injectListMarkers(container) {
 
     container.querySelectorAll('ol').forEach((ol) => {
@@ -1238,10 +1495,20 @@ async function exportToPdf(paneEl, filename, btnEl) {
     });
 
     container.querySelectorAll('ul').forEach((ul) => {
+      let depth = 0;
+      let curr = ul;
+      while (curr && curr !== container) {
+        if (curr.tagName === 'UL') depth++;
+        curr = curr.parentElement;
+      }
+
+      let markerText = '•';
+      if (depth === 2) markerText = '◦';
+      if (depth >= 3) markerText = '▪';
 
       ul.querySelectorAll(':scope > li').forEach((li) => {
         if (!li.querySelector('.pdf-list-marker')) {
-          wrapLiContent(li, '•');
+          wrapLiContent(li, markerText);
         }
       });
     });
@@ -1299,6 +1566,7 @@ async function exportToPdf(paneEl, filename, btnEl) {
           pageBottom = bounds.top + CONTENT_H;
 
           while (pageBottom < bounds.bottom) {
+            pageBreaks.push(pageBottom);
             pageBottom += CONTENT_H;
           }
         }
@@ -1317,6 +1585,22 @@ async function exportToPdf(paneEl, filename, btnEl) {
       backgroundColor: bgColor,
       width: CONTENT_W,
       height: totalH,
+    });
+
+    // Collect link positions before removing offscreen container from DOM
+    const linkAnnotations = [];
+    clone.querySelectorAll('a[href]').forEach((a) => {
+      const href = a.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+      const rect = a.getBoundingClientRect();
+      const wrapRect = clone.getBoundingClientRect();
+      linkAnnotations.push({
+        href,
+        top: rect.top - wrapRect.top,
+        left: rect.left - wrapRect.left,
+        width: rect.width,
+        height: rect.height,
+      });
     });
 
     document.body.removeChild(wrap);
@@ -1356,9 +1640,44 @@ async function exportToPdf(paneEl, filename, btnEl) {
 
 
       pdf.addImage(pageImgData, 'JPEG', MARGIN_MM, MARGIN_MM, imgW_mm, imgH_mm);
+
+      // Overlay clickable link annotations for this page
+      for (const link of linkAnnotations) {
+        const linkTop = link.top;
+        const linkBottom = link.top + link.height;
+        // Check if this link falls within the current page slice
+        if (linkBottom > sliceTopPx && linkTop < sliceBottomPx) {
+          const relTop = Math.max(linkTop - sliceTopPx, 0);
+          const relBottom = Math.min(linkBottom - sliceTopPx, sliceHeightPx);
+          const xMm = MARGIN_MM + link.left * pxToMm;
+          const yMm = MARGIN_MM + relTop * pxToMm;
+          const wMm = link.width * pxToMm;
+          const hMm = (relBottom - relTop) * pxToMm;
+          pdf.link(xMm, yMm, wMm, hMm, { url: link.href });
+        }
+      }
     }
 
-    pdf.save(filename);
+    // Strategy 1: Native File System Access API (Stream routing to physical disk)
+    if (window.showSaveFilePicker) {
+      try {
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: 'PDF Document', accept: { 'application/pdf': ['.pdf'] } }],
+        });
+        const pdfBlob = pdf.output('blob');
+        const writable = await fileHandle.createWritable();
+        await writable.write(pdfBlob);
+        await writable.close();
+      } catch (saveErr) {
+        if (saveErr.name === 'AbortError') return; // user cancelled
+        // Fall back to Strategy 2
+        await fallbackPdfDownload(pdf, filename);
+      }
+    } else {
+      // Strategy 2: Server fallback
+      await fallbackPdfDownload(pdf, filename);
+    }
   } catch (err) {
     if (document.body.contains(wrap)) document.body.removeChild(wrap);
     console.error('PDF export failed:', err);
@@ -1410,11 +1729,13 @@ function setLoading(loading) {
     btnLoader.hidden = false;
     convertBtn.disabled = true;
     urlInput.disabled = true;
+    if (bypassCacheCheckbox) bypassCacheCheckbox.disabled = true;
   } else {
     btnText.hidden = false;
     btnLoader.hidden = true;
     convertBtn.disabled = false;
     urlInput.disabled = false;
+    if (bypassCacheCheckbox) bypassCacheCheckbox.disabled = false;
   }
 }
 
@@ -1449,8 +1770,13 @@ function hideDownload() {
 urlForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const url = urlInput.value.trim();
+  let url = urlInput.value.trim();
   if (!url) return;
+
+  if (bypassCacheCheckbox && bypassCacheCheckbox.checked) {
+    const sep = url.includes('?') ? '&' : '?';
+    url += `${sep}refresh=${Date.now()}`;
+  }
 
   hideError();
   hideDownload();
@@ -1553,6 +1879,7 @@ urlForm.addEventListener('submit', async (e) => {
       m2mdExportPdfBtn.disabled = false;
       const renderedHtml = marked.parse(stripFrontMatter(currentMarkdownContent));
       m2mdPreviewContent.innerHTML = `<div class="medium-preview">${renderedHtml}</div>`;
+      updateWordCharStats(m2mdPreviewContent.innerText || '', 'm2md-preview-stats');
 
       // Extract images from ZIP for preview
       if (data.zipBase64) {
@@ -1653,7 +1980,7 @@ function flashDownloadSuccess() {
 downloadBtn.addEventListener('click', async () => {
   if (!currentZipBase64 && !currentZipToken) return;
 
-  // Strategy 1: File System Access API (bypasses browser download restrictions)
+  // Strategy 1: Native File System Access API (Stream routing to physical disk)
   if (window.showSaveFilePicker) {
     try {
       const fileHandle = await window.showSaveFilePicker({
@@ -1769,20 +2096,156 @@ function addM2mdCopyImageButtons(container) {
 }
 
 // ───────────────────────────────────────
-// Tab support in textarea
+// IDE Editor Hotkeys (VS Code style)
 // ───────────────────────────────────────
 
 markdownInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Tab') {
+  const start = markdownInput.selectionStart;
+  const end = markdownInput.selectionEnd;
+  const selectedText = markdownInput.value.substring(start, end);
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+  // Helper to safely manipulate text while strictly preserving native browser Undo (Ctrl+Z) / Redo (Ctrl+Y) stacks
+  const insertText = (text, newCursorPos = null, newSelectionEnd = null) => {
     e.preventDefault();
-    const start = markdownInput.selectionStart;
-    const end = markdownInput.selectionEnd;
-    markdownInput.value =
-      markdownInput.value.substring(0, start) +
-      '  ' +
-      markdownInput.value.substring(end);
-    markdownInput.selectionStart = markdownInput.selectionEnd = start + 2;
+    document.execCommand('insertText', false, text);
+    if (newCursorPos !== null) {
+      markdownInput.selectionStart = newCursorPos;
+      markdownInput.selectionEnd = newSelectionEnd !== null ? newSelectionEnd : newCursorPos;
+    }
     renderPreview();
+  };
+
+  const getLineIndices = (text, col) => {
+    let lineStart = text.lastIndexOf('\n', col - 1) + 1;
+    let lineEnd = text.indexOf('\n', col);
+    if (lineEnd === -1) lineEnd = text.length;
+    return { lineStart, lineEnd };
+  };
+
+  // 1. Tab indentation
+  if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    insertText('  ', start + 2);
+    return;
+  }
+
+  // 2. Formatting Modifiers & Commenting (Ctrl/Cmd + Key)
+  if (cmdOrCtrl && !e.shiftKey && !e.altKey) {
+    const key = e.key.toLowerCase();
+    
+    if (key === 'b') { // Bold
+      const isBold = selectedText.startsWith('**') && selectedText.endsWith('**');
+      if (isBold) {
+        insertText(selectedText.slice(2, -2), start, end - 4);
+      } else {
+        insertText(`**${selectedText}**`, start + 2, end + 2);
+      }
+      return;
+    }
+    
+    if (key === 'i') { // Italic
+      const isItalic = selectedText.startsWith('*') && selectedText.endsWith('*') && !selectedText.startsWith('**');
+      if (isItalic) {
+        insertText(selectedText.slice(1, -1), start, end - 2);
+      } else {
+        insertText(`*${selectedText}*`, start + 1, end + 1);
+      }
+      return;
+    }
+    
+    if (key === 'k') { // Link
+      insertText(`[${selectedText}]()`, start + selectedText.length + 3);
+      return;
+    }
+
+    if (key === '/') { // HTML Comment toggle
+      const { lineStart, lineEnd } = getLineIndices(markdownInput.value, start);
+      const activeStart = selectedText ? start : lineStart;
+      const activeEnd = selectedText ? end : lineEnd;
+      const activeText = markdownInput.value.substring(activeStart, activeEnd);
+      
+      markdownInput.selectionStart = activeStart;
+      markdownInput.selectionEnd = activeEnd;
+      
+      if (activeText.startsWith('<!--') && activeText.endsWith('-->')) {
+        insertText(activeText.slice(4, -3).trim(), activeStart, activeStart + activeText.length - 7);
+      } else {
+        insertText(`<!-- ${activeText} -->`, activeStart, activeStart + activeText.length + 9);
+      }
+      return;
+    }
+  }
+
+  // 3. Move Line Up/Down (Alt + ArrowKey)
+  if (e.altKey && !cmdOrCtrl && !e.shiftKey) {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      const { lineStart, lineEnd } = getLineIndices(markdownInput.value, start);
+      const isUp = e.key === 'ArrowUp';
+      
+      if (isUp && lineStart > 0) {
+        const prevLineInfo = getLineIndices(markdownInput.value, lineStart - 2);
+        const thisLine = markdownInput.value.substring(lineStart, lineEnd);
+        const prevLine = markdownInput.value.substring(prevLineInfo.lineStart, prevLineInfo.lineEnd);
+        
+        markdownInput.selectionStart = prevLineInfo.lineStart;
+        markdownInput.selectionEnd = lineEnd;
+        insertText(`${thisLine}\n${prevLine}`, prevLineInfo.lineStart + (start - lineStart));
+        return;
+      }
+      
+      if (!isUp && lineEnd < markdownInput.value.length) {
+        const nextLineInfo = getLineIndices(markdownInput.value, lineEnd + 1);
+        const thisLine = markdownInput.value.substring(lineStart, lineEnd);
+        const nextLine = markdownInput.value.substring(nextLineInfo.lineStart, nextLineInfo.lineEnd);
+        
+        markdownInput.selectionStart = lineStart;
+        markdownInput.selectionEnd = nextLineInfo.lineEnd;
+        insertText(`${nextLine}\n${thisLine}`, lineStart + nextLine.length + 1 + (start - lineStart));
+        return;
+      }
+    }
+  }
+
+  // 4. Auto-pairing brackets/quotes & Smart Backspace
+  if (!cmdOrCtrl && !e.altKey) {
+    const pairs = { '(': ')', '[': ']', '{': '}', '<': '>', '"': '"', "'": "'", '`': '`' };
+    const closingPairs = { ')': true, ']': true, '}': true, '>': true, '"': true, "'": true, '`': true };
+    const nextChar = markdownInput.value.charAt(start);
+    const prevChar = markdownInput.value.charAt(start - 1);
+
+    // Smart backspace: delete empty matched pair "(|)" -> "|"
+    if (e.key === 'Backspace' && start === end && pairs[prevChar] && pairs[prevChar] === nextChar) {
+      markdownInput.selectionStart = start - 1;
+      markdownInput.selectionEnd = start + 1;
+      insertText('', start - 1, start - 1);
+      return;
+    }
+
+    // Wrap highlighted text
+    if (selectedText.length > 0 && pairs[e.key]) {
+      insertText(`${e.key}${selectedText}${pairs[e.key]}`, start + 1, end + 1);
+      return;
+    }
+
+    // Inject empty pair "()" when nothing is selected
+    if (selectedText.length === 0 && pairs[e.key]) {
+      // If pressing a quote ' or " that's already injected next, just step over
+      if (e.key === nextChar && closingPairs[e.key]) {
+        e.preventDefault();
+        markdownInput.selectionStart = markdownInput.selectionEnd = start + 1;
+      } else {
+        insertText(`${e.key}${pairs[e.key]}`, start + 1, start + 1);
+      }
+      return;
+    }
+
+    // Step over standard closing brackets without duplicating
+    if (selectedText.length === 0 && closingPairs[e.key] && nextChar === e.key) {
+      e.preventDefault();
+      markdownInput.selectionStart = markdownInput.selectionEnd = start + 1;
+      return;
+    }
   }
 });
 

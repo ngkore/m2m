@@ -50,6 +50,18 @@ function unwrapEmbedly(src) {
   return src;
 }
 
+/** Remove verbose Medium tracking parameters from external URLs. */
+function cleanTrackingParams(href) {
+  try {
+    const u = new URL(href);
+    if (u.searchParams.has('source') && u.searchParams.get('source').startsWith('post_page')) {
+      u.searchParams.delete('source');
+      return u.toString();
+    }
+  } catch (_) {}
+  return href;
+}
+
 /** Resolve an iframe src to a canonical URL (handles Embedly, YouTube, Vimeo, Gist). */
 function resolveIframeSrc(src) {
   const resolved = unwrapEmbedly(src);
@@ -59,7 +71,7 @@ function resolveIframeSrc(src) {
   if (gistMatch) return `https://gist.github.com/${gistMatch[1]}`;
   const vimeoMatch = resolved.match(/player\.vimeo\.com\/video\/(\d+)/);
   if (vimeoMatch) return `https://vimeo.com/${vimeoMatch[1]}`;
-  return unwrapMediumRedirect(resolved);
+  return cleanTrackingParams(unwrapMediumRedirect(resolved));
 }
 
 /** Post-process: replace remaining bare Embedly CDN URLs with their original sources. */
@@ -243,6 +255,39 @@ function createTurndownService() {
     },
   });
 
+  // Medium Code Blocks
+  // Native code blocks on Medium natively formulate line breaks via `<br>` tags rather than literal `\n` characters.
+  // Transform these BR representations prior to general markup processing.
+  td.addRule('mediumCodeBlock', {
+    filter: (node) => {
+      // Capture isolated `pre` blocks not wrapped around standard `code` nodes.
+      if (node.nodeName === 'PRE' && !node.querySelector('code')) return true;
+      // Catch divs posing as pre
+      const cls = node.getAttribute('class') || '';
+      return (cls.includes('pw-post-body-pre') || cls.includes('graf--pre')) && !node.querySelector('code');
+    },
+    replacement: (content, node) => {
+      // Create a temporary clone to safely manipulate child nodes
+      const clone = node.cloneNode(true);
+      // Replace all <br> with actual newlines
+      const brs = clone.querySelectorAll('br');
+      for (let i = 0; i < brs.length; i++) {
+        brs[i].replaceWith('\n');
+      }
+      
+      // Extract the raw text properly
+      let rawText = clone.textContent.trim();
+      
+      // Unwrap matching `md` or `markdown` semantic fences injecting content raw into output stream.
+      const mdMatch = rawText.match(/^\s*```\s*(?:md|markdown)[\s\n]+([\s\S]*?)(?:\n\s*```\s*)?$/i);
+      if (mdMatch) {
+        return `\n\n${mdMatch[1].trim()}\n\n`;
+      }
+
+      return `\n\n\`\`\`\n${rawText}\n\`\`\`\n\n`;
+    },
+  });
+
   return td;
 }
 
@@ -283,6 +328,11 @@ function unwrapMdCodeBlocks(markdown) {
   );
 }
 
+/** Invert \`[text](url)\` -> [\`text\`](url) for inline code links parsed by Turndown. */
+function fixInlineCodeLinks(markdown) {
+  return markdown.replace(/`\[([^\]]+)\]\(([^)]+)\)`/g, '[`$1`]($2)');
+}
+
 /** Full pipeline: Medium URL → Markdown → ZIP buffer. */
 export async function convertMediumUrl(url) {
   const { html, title, author, date } = await scrapeArticle(url);
@@ -295,6 +345,7 @@ export async function convertMediumUrl(url) {
   markdown = resolveRedirectLinks(markdown);
   markdown = resolveEmbedlyLinks(markdown);
   markdown = postProcessAdmonitions(markdown);
+  markdown = fixInlineCodeLinks(markdown);
 
 
   const escYaml = (s) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -335,6 +386,7 @@ export async function convertHtmlToZip(html, sourceUrl) {
   markdown = resolveRedirectLinks(markdown);
   markdown = resolveEmbedlyLinks(markdown);
   markdown = postProcessAdmonitions(markdown);
+  markdown = fixInlineCodeLinks(markdown);
 
   const escYaml = (s) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const frontMatter = [
