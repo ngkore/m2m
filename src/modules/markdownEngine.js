@@ -55,6 +55,9 @@ export function stripFrontMatter(markdown) {
 export function preprocessForMedium(markdown) {
   let md = stripFrontMatter(markdown);
 
+  // Fix GitHub blob image URLs to serve raw images
+  md = md.replace(/!\[([^\]]*)\]\(https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/([^\)]+)\)/g, '![$1](https://raw.githubusercontent.com/$2/$3/$4/$5)');
+
   md = md.replace(/^(\s*[-*+]\s+)\[[ ]\]/gm, '$1☐');
   md = md.replace(/^(\s*[-*+]\s+)\[[xX]\]/gm, '$1☑');
 
