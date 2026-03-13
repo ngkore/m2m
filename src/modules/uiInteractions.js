@@ -302,13 +302,114 @@ export function setupUI() {
         return { lineStart, lineEnd };
       };
 
-      if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        insertText('  ', start + 2);
+      if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        const isShift = e.shiftKey;
+        
+        const fullText = DOM.markdownInput.value;
+        const blockStart = fullText.lastIndexOf('\n', start - 1) + 1;
+        let blockEnd = fullText.indexOf('\n', end);
+        if (blockEnd === -1) blockEnd = fullText.length;
+        if (end > start && fullText[end - 1] === '\n') {
+           blockEnd = end - 1;
+        }
+
+        const selectedBlock = fullText.substring(blockStart, blockEnd);
+        const lines = selectedBlock.split('\n');
+        
+        let newStart = start;
+        let newEnd = end;
+        
+        const isSingleLine = lines.length === 1;
+        const isListItem = isSingleLine && /^(\s*)([*+-]\s|\d+\.\s(?:\[[ xX]\]\s)?)/.test(lines[0]);
+        
+        if (!isShift && isSingleLine && !isListItem && start > blockStart) {
+            document.execCommand('insertText', false, '  ');
+            renderPreview();
+            return;
+        }
+
+        const newLines = lines.map((line, idx) => {
+            if (!isShift) {
+                if (idx === 0) newStart += 2;
+                newEnd += 2;
+                return '  ' + line;
+            } else {
+                if (line.startsWith('  ')) {
+                    if (idx === 0) newStart = Math.max(blockStart, newStart - 2);
+                    newEnd = Math.max(blockStart, newEnd - 2);
+                    return line.substring(2);
+                } else if (line.startsWith(' ') || line.startsWith('\t')) {
+                    if (idx === 0) newStart = Math.max(blockStart, newStart - 1);
+                    newEnd = Math.max(blockStart, Math.max(newEnd - 1, 0));
+                    return line.substring(1);
+                }
+                return line;
+            }
+        });
+
+        const newBlock = newLines.join('\n');
+        if (newBlock !== selectedBlock) {
+            DOM.markdownInput.selectionStart = blockStart;
+            DOM.markdownInput.selectionEnd = blockEnd;
+            document.execCommand('insertText', false, newBlock);
+            DOM.markdownInput.selectionStart = newStart;
+            DOM.markdownInput.selectionEnd = newEnd;
+            renderPreview();
+        }
         return;
+      }
+
+      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const { lineStart } = getLineIndices(DOM.markdownInput.value, start);
+        const currentLine = DOM.markdownInput.value.substring(lineStart, start);
+        
+        // Match unordered lists: "* ", "- ", "+ "
+        // Also match checkboxes: "- [ ] ", "- [x] "
+        const listMatch = currentLine.match(/^(\s*)([*+-]\s+(?:\[[ xX]\]\s+)?)(.*)$/);
+        
+        if (listMatch) {
+          const indent = listMatch[1];
+          let prefix = listMatch[2];
+          const textAfterPrefix = listMatch[3];
+          
+          if (textAfterPrefix.trim() === '') {
+            // If the user presses enter on an empty bullet line, remove the bullet
+            e.preventDefault();
+            DOM.markdownInput.selectionStart = lineStart;
+            DOM.markdownInput.selectionEnd = start;
+            document.execCommand('insertText', false, '');
+            renderPreview();
+            return;
+          }
+          
+          // For checkboxes, always insert an unchecked box
+          if (prefix.includes('[x]') || prefix.includes('[X]')) {
+             prefix = prefix.replace(/\[[xX]\]/, '[ ]');
+          }
+
+          insertText('\n' + indent + prefix, start + 1 + indent.length + prefix.length);
+          return;
+        }
       }
 
       if (cmdOrCtrl && !e.shiftKey && !e.altKey) {
         const key = e.key.toLowerCase();
+        
+        if (key === 'z') {
+            e.preventDefault();
+            document.execCommand('undo');
+            renderPreview();
+            return;
+        }
+        
+        if (key === 'y') {
+            e.preventDefault();
+            document.execCommand('redo');
+            renderPreview();
+            return;
+        }
+        
         if (key === 'b') { 
           const isBold = selectedText.startsWith('**') && selectedText.endsWith('**');
           if (isBold) {
@@ -396,6 +497,11 @@ export function setupUI() {
         }
 
         if (selectedText.length === 0 && pairs[e.key]) {
+          
+          if (e.key === '`') {
+            return; 
+          }
+
           if (e.key === nextChar && closingPairs[e.key]) {
             e.preventDefault();
             DOM.markdownInput.selectionStart = DOM.markdownInput.selectionEnd = start + 1;

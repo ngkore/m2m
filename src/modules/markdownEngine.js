@@ -55,7 +55,6 @@ export function stripFrontMatter(markdown) {
 export function preprocessForMedium(markdown) {
   let md = stripFrontMatter(markdown);
 
-  // Fix GitHub blob image URLs to serve raw images
   md = md.replace(/!\[([^\]]*)\]\(https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/([^\)]+)\)/g, '![$1](https://raw.githubusercontent.com/$2/$3/$4/$5)');
 
   md = md.replace(/^(\s*[-*+]\s+)\[[ ]\]/gm, '$1☐');
@@ -422,7 +421,9 @@ export function renderPreview() {
     return;
   }
 
-  DOM.previewContent.innerHTML = `<div class="medium-preview">${marked.parse(preprocessForMedium(md))}</div>`;
+  const rawHtml = marked.parse(preprocessForMedium(md));
+  const transformedHtml = transformListsForMedium(rawHtml, false);
+  DOM.previewContent.innerHTML = `<div class="medium-preview">${transformedHtml}</div>`;
 
   convertTablesToImages(DOM.previewContent);
   updateWordCharStats(DOM.previewContent.innerText || '', 'md-preview-stats');
@@ -494,6 +495,44 @@ export function reformatMarkdown(md) {
   return text;
 }
 
+export function renumberOrderedListsInMarkdown(text) {
+  const lines = text.split('\n');
+  const result = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const olFirstMatch = line.match(/^(\s*)\d+\.\s/);
+
+    if (olFirstMatch) {
+      const indent = olFirstMatch[1];
+      const indentEsc = indent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const groupRegex = new RegExp(`^${indentEsc}\\d+\\.\\s`);
+
+      // Collect consecutive lines in this group (same indent level, all numbered)
+      const rawGroup = [];
+      let j = i;
+      while (j < lines.length && groupRegex.test(lines[j])) {
+        rawGroup.push(lines[j]);
+        j++;
+      }
+
+      // Renumber starting from 1
+      rawGroup.forEach((gLine, k) => {
+        const content = gLine.replace(/^(\s*)\d+\.\s+?/, '');
+        result.push(`${indent}${k + 1}. ${content}`);
+      });
+
+      i = j;
+    } else {
+      result.push(line);
+      i++;
+    }
+  }
+
+  return result.join('\n');
+}
+
 export function getMaxDepth(listEl, currentDepth) {
   let max = currentDepth;
   listEl.querySelectorAll(':scope > li').forEach((li) => {
@@ -505,72 +544,175 @@ export function getMaxDepth(listEl, currentDepth) {
   return max;
 }
 
-export function transformListsForMedium(html) {
+/**
+ * Insert a bold prefix at the very start of an li or wrapper element's text content.
+ */
+function insertPrefix(el, prefixHTML) {
+  const firstEl = el.firstElementChild;
+  if (firstEl && (firstEl.tagName === 'P' || firstEl.tagName === 'DIV' || firstEl.tagName === 'SPAN')) {
+    firstEl.insertAdjacentHTML('afterbegin', prefixHTML);
+  } else {
+    el.insertAdjacentHTML('afterbegin', prefixHTML);
+  }
+}
+
+/**
+ * Returns true if the <ol> or <ul> is "loose" — i.e. Marked wrapped
+ * each <li>'s content in <p> tags (happens when blank lines exist between items).
+ */
+function isLooseList(listEl) {
+  return Array.from(listEl.children).some(
+    li => li.tagName === 'LI' && li.querySelector(':scope > p')
+  );
+}
+
+export function transformListsForMedium(html, transformUL = false) {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;
 
-  const allLists = tempDiv.querySelectorAll('ul, ol');
-  const topLists = Array.from(allLists).filter(list => list.parentElement.closest('ul, ol') === null);
+  // Work only on top-level lists (not nested ones; we'll handle those recursively)
+  const topLists = Array.from(tempDiv.querySelectorAll('ul, ol')).filter(
+    list => list.parentElement.closest('ul, ol') === null
+  );
 
   topLists.forEach((list) => {
-    const maxDepth = getMaxDepth(list, 1);
-    if (maxDepth === 1) return;
+    const tag = list.tagName; // 'OL' or 'UL'
 
-    const depth2Lists = list.querySelectorAll(':scope > li > ul, :scope > li > ol');
-    depth2Lists.forEach((nested) => {
-      if (nested.tagName === 'OL') {
-        const ul = document.createElement('ul');
-        while (nested.firstChild) ul.appendChild(nested.firstChild);
-        Array.from(nested.attributes).forEach(a => ul.setAttribute(a.name, a.value));
-        nested.replaceWith(ul);
-        nested = ul;
+    // ── ORDERED LIST ─────────────────────────────────────────────────────────
+    if (tag === 'OL') {
+      const items = Array.from(list.children).filter(c => c.tagName === 'LI');
+      const startNum = parseInt(list.getAttribute('start') || '1', 10);
+
+      // Check if all items are "simple" (contain no blocks other than a single <p>)
+      const isSimple = items.every(li => {
+        const blocks = Array.from(li.children).filter(c => 
+          ['P', 'DIV', 'BLOCKQUOTE', 'PRE', 'UL', 'OL', 'TABLE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(c.tagName)
+        );
+        return blocks.length === 0 || (blocks.length === 1 && blocks[0].tagName === 'P');
+      });
+
+      if (isSimple) {
+        // Merge into a single <p> separated by <br> so it's tight in Medium and Preview
+        const p = document.createElement('p');
+        items.forEach((li, idx) => {
+          if (idx > 0) p.appendChild(document.createElement('br'));
+          
+          const prefix = document.createElement('strong');
+          prefix.textContent = `${startNum + idx}. `;
+          p.appendChild(prefix);
+          
+          const childP = li.querySelector(':scope > p');
+          const source = childP ? childP : li;
+          while (source.firstChild) p.appendChild(source.firstChild);
+        });
+        list.parentNode.insertBefore(p, list);
+        list.remove();
+        return;
       }
-      
-      let deepList;
-      while ((deepList = nested.querySelector('ul, ol')) !== null) {
-         const parentLi = deepList.closest('li');
-         const items = Array.from(deepList.children).filter(c => c.tagName === 'LI');
-         
-         let currentLi = parentLi;
-         items.forEach((li, idx) => {
-             const letter = String.fromCharCode(97 + (idx % 26));
-             const firstEl = li.firstElementChild;
-             if (firstEl && (firstEl.tagName === 'P' || firstEl.tagName === 'DIV' || firstEl.tagName === 'SPAN')) {
-                 firstEl.insertAdjacentHTML('afterbegin', `<strong>${letter})</strong> `);
-             } else {
-                 li.insertAdjacentHTML('afterbegin', `<strong>${letter})</strong> `);
-             }
-             
-             currentLi.insertAdjacentElement('afterend', li);
-             currentLi = li;
-         });
-         deepList.remove();
+
+      // If there are complex blocks, render them as separate paragraphs/divs
+      items.forEach((li, idx) => {
+        const hasBlock = Array.from(li.children).some(
+          c => c.tagName === 'P' || c.tagName === 'DIV' || c.tagName === 'BLOCKQUOTE' || c.tagName === 'PRE'
+        );
+        const wrapper = document.createElement(hasBlock ? 'div' : 'p');
+        while (li.firstChild) wrapper.appendChild(li.firstChild);
+        insertPrefix(wrapper, `<strong>${startNum + idx}.</strong> `);
+        list.parentNode.insertBefore(wrapper, list);
+      });
+      list.remove();
+      return;
+    }
+
+    // ── UNORDERED LIST ───────────────────────────────────────────────────────
+    const maxDepth = getMaxDepth(list, 1);
+    if (!transformUL) return;
+
+    if (maxDepth === 1) {
+      // UL depth 1 → leave completely unchanged as native <ul>
+      return;
+    }
+
+    if (maxDepth === 2) {
+      // UL depth 2:
+      //   depth-1 items → bold numeric paragraphs
+      //   depth-2 items → remain as a native <ul> inserted after their parent paragraph
+      const topItems = Array.from(list.children).filter(c => c.tagName === 'LI');
+      let counter = 1;
+      topItems.forEach((li) => {
+        const nestedUL = li.querySelector(':scope > ul, :scope > ol');
+
+        // Build a paragraph for the top-level item text
+        const wrapper = document.createElement('p');
+        Array.from(li.childNodes).forEach(child => {
+          if (child !== nestedUL) wrapper.appendChild(child);
+        });
+        insertPrefix(wrapper, `<strong>${counter}.</strong> `);
+        counter++;
+
+        list.parentNode.insertBefore(wrapper, list);
+
+        if (nestedUL) {
+          // Convert any nested OL → UL so Medium handles it uniformly
+          let nested = nestedUL;
+          if (nested.tagName === 'OL') {
+            const ul = document.createElement('ul');
+            while (nested.firstChild) ul.appendChild(nested.firstChild);
+            nested = ul;
+          }
+          list.parentNode.insertBefore(nested, list);
+        }
+      });
+      list.remove();
+      return;
+    }
+
+    // maxDepth >= 3:
+    // UL depth 3 rules:
+    //   depth-1 → bold numeric paragraphs
+    //   depth-2 → native <ul>
+    //   depth-3 → items get bold a) b) c) labels injected inside existing <li>
+
+    // First, label depth-3 items (inside depth-2 <li>)
+    list.querySelectorAll(':scope > li > ul > li > ul, :scope > li > ul > li > ol').forEach((depth3List) => {
+      const d3items = Array.from(depth3List.children).filter(c => c.tagName === 'LI');
+      d3items.forEach((li, idx) => {
+        const letter = String.fromCharCode(97 + (idx % 26));
+        insertPrefix(li, `<strong>${letter})</strong> `);
+      });
+      // Convert depth-3 OL to UL so Medium treats it uniformly
+      if (depth3List.tagName === 'OL') {
+        const ul = document.createElement('ul');
+        while (depth3List.firstChild) ul.appendChild(depth3List.firstChild);
+        Array.from(depth3List.attributes).forEach(a => ul.setAttribute(a.name, a.value));
+        depth3List.replaceWith(ul);
       }
     });
 
-    const items = Array.from(list.children).filter(c => c.tagName === 'LI');
-    items.forEach((li, idx) => {
-        const nestedList = li.querySelector(':scope > ul, :scope > ol');
-        const hasBlock = Array.from(li.children).some(c => c.tagName === 'P' || c.tagName === 'DIV' || c.tagName === 'BLOCKQUOTE');
-        const wrapper = document.createElement(hasBlock ? 'div' : 'p');
-        
-        Array.from(li.childNodes).forEach(child => {
-            if (child !== nestedList) {
-                wrapper.appendChild(child);
-            }
-        });
+    // Now process depth-1 → bold numeric paragraphs (with depth-2 ul kept intact)
+    const topItems = Array.from(list.children).filter(c => c.tagName === 'LI');
+    let counter = 1;
+    topItems.forEach((li) => {
+      const nestedUL = li.querySelector(':scope > ul, :scope > ol');
 
-        const firstEl = wrapper.firstElementChild;
-        if (firstEl && (firstEl.tagName === 'P' || firstEl.tagName === 'DIV' || firstEl.tagName === 'SPAN')) {
-            firstEl.insertAdjacentHTML('afterbegin', `<strong>${idx + 1}.</strong> `);
-        } else {
-            wrapper.insertAdjacentHTML('afterbegin', `<strong>${idx + 1}.</strong> `);
-        }
+      const wrapper = document.createElement('p');
+      Array.from(li.childNodes).forEach(child => {
+        if (child !== nestedUL) wrapper.appendChild(child);
+      });
+      insertPrefix(wrapper, `<strong>${counter}.</strong> `);
+      counter++;
 
-        list.parentNode.insertBefore(wrapper, list);
-        if (nestedList) {
-            list.parentNode.insertBefore(nestedList, list);
+      list.parentNode.insertBefore(wrapper, list);
+
+      if (nestedUL) {
+        let nested = nestedUL;
+        if (nested.tagName === 'OL') {
+          const ul = document.createElement('ul');
+          while (nested.firstChild) ul.appendChild(nested.firstChild);
+          nested = ul;
         }
+        list.parentNode.insertBefore(nested, list);
+      }
     });
     list.remove();
   });
@@ -611,6 +753,6 @@ export function buildMediumHtml(markdown) {
     });
     html = tempDiv.innerHTML;
   }
-  html = transformListsForMedium(html);
+  html = transformListsForMedium(html, true);
   return html;
 }
