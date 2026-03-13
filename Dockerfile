@@ -1,5 +1,8 @@
 # ── Stage 1: Build the Vite frontend ─────────────────────────────────────────
-FROM node:20-slim AS build
+FROM node:20-alpine AS build
+
+# Skip Puppeteer download in build stage
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -8,28 +11,20 @@ COPY . .
 RUN npm run build
 
 # ── Stage 2: Production image ────────────────────────────────────────────────
-FROM node:20-slim
+FROM node:20-alpine
 
-# Install Chromium dependencies for Puppeteer
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install Chromium for Puppeteer on Alpine
+RUN apk add --no-cache \
     chromium \
-    fonts-liberation \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcups2 \
-    libdrm2 \
-    libgbm1 \
-    libnss3 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libxshmfence1 \
+    nss \
+    freetype \
+    harfbuzz \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    ttf-freefont
 
 # Tell Puppeteer to use the system-installed Chromium
 ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 
