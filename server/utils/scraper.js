@@ -11,7 +11,16 @@ const FREEDIUM_MIRRORS = [
 let _browser = null;
 
 async function getBrowser() {
-  if (_browser) return _browser;
+  // Check if existing browser is still connected; reset if crashed
+  if (_browser) {
+    try {
+      const pages = await _browser.pages();
+      if (pages !== null) return _browser;
+    } catch (_) {
+      // Browser crashed — reset and relaunch
+      _browser = null;
+    }
+  }
 
   const puppeteer = (await import('puppeteer-extra')).default;
   const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default;
@@ -25,9 +34,23 @@ async function getBrowser() {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
+      '--disable-extensions',
+      '--disable-background-networking',
+      '--disable-default-apps',
+      '--disable-sync',
+      '--disable-translate',
+      '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+      '--hide-scrollbars',
+      '--mute-audio',
+      '--no-first-run',
+      '--safebrowsing-disable-auto-update',
+      '--single-process',           // Critical for low-memory containers
+      '--memory-pressure-off',
+      '--max_old_space_size=256',
     ],
   });
 
+  _browser.on('disconnected', () => { _browser = null; });
   return _browser;
 }
 
@@ -122,7 +145,7 @@ export async function scrapeArticle(url) {
       const browser = await getBrowser();
       page = await browser.newPage();
 
-      // Block heavy resources to speed up page load
+      // Minimize memory: block heavy resources
       await page.setRequestInterception(true);
       page.on('request', (req) => {
         const type = req.resourceType();
@@ -133,11 +156,12 @@ export async function scrapeArticle(url) {
         }
       });
 
-      await page.setViewport({ width: 1280, height: 800 });
-      await page.goto(cleanUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      // Small viewport saves memory on Render
+      await page.setViewport({ width: 800, height: 600 });
+      await page.goto(cleanUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
 
 
-      await page.waitForSelector('article, main, [data-testid="postContent"]', { timeout: 10000 }).catch(() => {});
+      await page.waitForSelector('article, main, [data-testid="postContent"]', { timeout: 8000 }).catch(() => {});
 
       html = await page.content();
       console.log('Strategy 3 (Puppeteer stealth) succeeded');
