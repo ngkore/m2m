@@ -7,26 +7,15 @@ const FREEDIUM_MIRRORS = [
   'https://freedium-mirror.cfd',
 ];
 
-// Lazy-init Puppeteer browser (singleton)
-let _browser = null;
-
-async function getBrowser() {
-  // Check if existing browser is still connected; reset if crashed
-  if (_browser) {
-    try {
-      const pages = await _browser.pages();
-      if (pages !== null) return _browser;
-    } catch (_) {
-      // Browser crashed — reset and relaunch
-      _browser = null;
-    }
-  }
-
+/** Launch a fresh Puppeteer browser, use it, then close it immediately.
+ * No singleton — Chromium (~200-300MB) is only in memory while actively scraping.
+ */
+async function launchBrowser() {
   const puppeteer = (await import('puppeteer-extra')).default;
   const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default;
   puppeteer.use(StealthPlugin());
 
-  _browser = await puppeteer.launch({
+  return puppeteer.launch({
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: [
@@ -36,36 +25,23 @@ async function getBrowser() {
       '--disable-gpu',
       '--disable-extensions',
       '--disable-background-networking',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
       '--disable-default-apps',
       '--disable-sync',
       '--disable-translate',
-      '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+      '--disable-features=TranslateUI,BlinkGenPropertyTrees,AudioServiceOutOfProcess',
       '--hide-scrollbars',
       '--mute-audio',
       '--no-first-run',
       '--safebrowsing-disable-auto-update',
-      '--single-process',           // Critical for low-memory containers
+      '--single-process',
       '--memory-pressure-off',
       '--max_old_space_size=256',
     ],
   });
-
-  _browser.on('disconnected', () => { _browser = null; });
-  return _browser;
 }
-
-
-async function closeBrowser() {
-  if (_browser) {
-    const b = _browser;
-    _browser = null;
-    try { await b.close(); } catch (_) {}
-  }
-}
-
-process.once('exit',    () => { if (_browser) try { _browser.close(); } catch (_) {} });
-process.once('SIGINT',  () => closeBrowser().then(() => process.exit(0)));
-process.once('SIGTERM', () => closeBrowser().then(() => process.exit(0)));
 
 /**
  * Scrape a Medium article.
@@ -75,8 +51,10 @@ export async function scrapeArticle(url) {
   const cleanUrl = url.split('?')[0];
   let html = null;
 
-  // --- Strategy 1: Direct fetch ---
-  try {
+  const isBypass = url.includes('refresh=');
+
+  // --- Strategy 1: Direct fetch (skipped when bypass cache is active) ---
+  if (!isBypass) try {
     const response = await axios.get(cleanUrl, {
       headers: {
         'User-Agent':
@@ -110,8 +88,7 @@ export async function scrapeArticle(url) {
     console.log(`Strategy 1 failed: ${err.response?.status || err.message}`);
   }
 
-  // Strategy 2: Freedium mirrors
-  const isBypass = url.includes('refresh=');
+  // Strategy 2: Freedium mirrors (skipped when bypass cache is active)
   if (!html && !isBypass) {
     for (const mirror of FREEDIUM_MIRRORS) {
       try {
@@ -137,38 +114,59 @@ export async function scrapeArticle(url) {
     }
   }
 
-  // Strategy 3: Puppeteer stealth
+  // Strategy 3: Puppeteer stealth — launch fresh, scrape, immediately destroy
   if (!html) {
+    let browser = null;
     let page = null;
     try {
       console.log('Strategy 3: launching Puppeteer stealth browser...');
-      const browser = await getBrowser();
+      browser = await launchBrowser();
       page = await browser.newPage();
 
-      // Minimize memory: block heavy resources
+      // Disable the in-page cache to stop Chromium accumulating memory
+      await page.setCacheEnabled(false);
+
+      // Block all resource types that aren't needed for HTML content extraction
+      const BLOCKED_TYPES = new Set([
+        'image', 'media', 'font', 'stylesheet',
+        'websocket', 'other',
+      ]);
       await page.setRequestInterception(true);
       page.on('request', (req) => {
-        const type = req.resourceType();
-        if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
+        if (BLOCKED_TYPES.has(req.resourceType())) {
           req.abort();
         } else {
           req.continue();
         }
       });
 
-      // Small viewport saves memory on Render
+      // Minimal viewport — saves GPU/render memory
       await page.setViewport({ width: 800, height: 600 });
       await page.goto(cleanUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
 
-
       await page.waitForSelector('article, main, [data-testid="postContent"]', { timeout: 8000 }).catch(() => {});
+
+      // Resolve lazy-loaded image src attributes before extracting HTML
+      await page.evaluate(() => {
+        document.querySelectorAll('img').forEach((img) => {
+          const lazySrc =
+            img.getAttribute('data-src') ||
+            img.getAttribute('data-lazy-src') ||
+            img.getAttribute('data-srcset')?.split(',')[0]?.trim()?.split(' ')[0];
+          if (lazySrc && !img.src.startsWith('http')) {
+            img.src = lazySrc;
+          }
+        });
+      }).catch(() => {});
 
       html = await page.content();
       console.log('Strategy 3 (Puppeteer stealth) succeeded');
     } catch (err) {
       console.log(`Strategy 3 (Puppeteer) failed: ${err.message}`);
     } finally {
+      // Always destroy browser immediately to free ~200-300MB
       if (page) await page.close().catch(() => {});
+      if (browser) await browser.close().catch(() => {});
     }
   }
 
