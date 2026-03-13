@@ -12,12 +12,12 @@ function getHighResUrl(url) {
     const u = new URL(url);
     if (u.hostname === 'miro.medium.com') {
       u.pathname = u.pathname
-        .replace(/\/resize:fit:\d+\//, '/resize:fit:2400/')
-        .replace(/\/resize:fill:\d+:\d+\//, '/resize:fit:2400/');
+        .replace(/\/resize:fit:\d+\//, '/resize:fit:4800/')
+        .replace(/\/resize:fill:\d+:\d+\//, '/resize:fit:4800/');
       return u.toString();
     }
     if (/cdn-images-\d+\.medium\.com/.test(u.hostname)) {
-      u.pathname = u.pathname.replace(/\/max\/\d+\//, '/max/2400/');
+      u.pathname = u.pathname.replace(/\/max\/\d+\//, '/max/4800/');
       return u.toString();
     }
   } catch (_) { /* non-URL strings fall through unchanged */ }
