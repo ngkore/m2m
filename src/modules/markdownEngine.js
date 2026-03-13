@@ -43,7 +43,7 @@ export function convertAdmonitionsForMedium(markdown) {
         .filter((l) => l.trim())
         .map((l) => l.replace(/^> ?/, ''))
         .join(' ');
-      return `> _**${label}:** ${content}_\n`;
+      return `> **_${label}:_** _${content}_\n`;
     }
   );
 }

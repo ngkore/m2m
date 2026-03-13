@@ -5,10 +5,10 @@ A bidirectional converter between Markdown (`.md`) files and Medium articles.
 - **MD → Medium** — write in Markdown, preview as Medium-style HTML, copy to clipboard, and paste directly into the Medium editor. Tables are automatically rendered as images (as Medium doesn't support native tables).
 - **Medium → MD** — paste a Medium article URL and get a clean Markdown file with all images downloaded at full resolution, packaged as a ZIP.
 
-![tool-preview](./images/tool-preview.png)
+<video src="./images/tool-preview.mp4" autoplay loop muted width="100%"></video>
 
 > [!IMPORTANT]
-> This tool is hosted on **Render (free tier)**, so the initial load may take a few moments. Your content is processed temporarily and **no private drafts are stored in external databases**.
+> Your content is processed temporarily and **no private drafts are stored in external databases**.
 
 ## Prerequisites
 
