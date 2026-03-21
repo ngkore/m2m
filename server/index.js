@@ -84,9 +84,6 @@ app.post('/api/fetch-md', async (req, res) => {
       content = resolveRelativePaths(content, repoContext);
     }
 
-
-    content = convertAdmonitions(content);
-
     res.json({ content, resolvedUrl: fetchUrl });
   } catch (err) {
     res.status(502).json({ error: `Could not fetch: ${err.response?.status || err.message}` });
@@ -131,25 +128,26 @@ function resolveRelativePaths(markdown, ctx) {
     return resolvedPath;
   }
 
-  // Images: ![alt](relative) → absolute
+  // Images: ![alt](relative) or ![alt](relative "title") → absolute
   markdown = markdown.replace(
-    /!\[([^\]]*)\]\(([^)]+)\)/g,
-    (match, alt, href) => {
+    /!\[([^\]]*)\]\(([^)\s]+)(\s+"[^"]*")?\)/g,
+    (match, alt, href, title) => {
       const resolved = resolvePath(href);
       if (resolved === null) return match;
-      return `![${alt}](${blobBase}/${resolved})`;
+      return `![${alt}](${blobBase}/${resolved}${title || ''})`;
     }
   );
 
-  // Links: [text](relative) → absolute
+  // Links: [text](relative) or [text](relative "title") → absolute
   markdown = markdown.replace(
-    /(?<!!)\[([^\]]*)\]\(([^)]+)\)/g,
-    (match, text, href) => {
-      const [pathPart, anchor] = href.split('#');
+    /(?<!!)\[([^\]]*)\]\(([^)\s]+)(\s+"[^"]*")?\)/g,
+    (match, text, href, title) => {
+      const [pathPart, ...anchorParts] = href.split('#');
+      if (!pathPart) return match; // hash-only link like #section
       const resolved = resolvePath(pathPart);
       if (resolved === null) return match;
-      const anchorSuffix = anchor ? `#${anchor}` : '';
-      return `[${text}](${blobBase}/${resolved}${anchorSuffix})`;
+      const anchorSuffix = anchorParts.length > 0 ? `#${anchorParts.join('#')}` : '';
+      return `[${text}](${blobBase}/${resolved}${anchorSuffix}${title || ''})`;
     }
   );
 
@@ -165,34 +163,6 @@ function resolveRelativePaths(markdown, ctx) {
 
   return markdown;
 }
-
-/** Convert GitHub-style admonitions to Medium-friendly blockquotes. */
-function convertAdmonitions(markdown) {
-  const types = {
-    NOTE: 'Note',
-    TIP: 'Tip',
-    IMPORTANT: 'Important',
-    WARNING: 'Warning',
-    CAUTION: 'Caution',
-  };
-  const pattern = Object.keys(types).join('|');
-
-  const regex = new RegExp(
-    `^(> *\\[!(${pattern})\\]\\s*\\n)((?:> ?.*(?:\\n|$))+)`,
-    'gm'
-  );
-
-  return markdown.replace(regex, (match, header, type, body) => {
-    const label = types[type];
-    const content = body
-      .split('\n')
-      .map((line) => line.replace(/^> ?/, '').trim())
-      .filter((line) => line.length > 0)
-      .join(' ');
-    return `> **${label}:** ${content}\n`;
-  });
-}
-
 
 
 app.post('/api/convert-url', async (req, res) => {

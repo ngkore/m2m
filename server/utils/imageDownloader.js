@@ -43,7 +43,7 @@ async function pLimit(tasks, limit) {
 
 /** Download images from Markdown, rewrite paths, return updated MD + image buffers. */
 export async function downloadImages(markdown) {
-  const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  const imageRegex = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
   const urlMap = new Map();
 
   let match;

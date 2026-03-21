@@ -27,13 +27,13 @@ const ADMONITION_TYPE_MAP = {
 
 /** Strip YAML front matter from Markdown. */
 function stripFrontMatter(markdown) {
-  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n*/m, '');
+  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n*/, '');
 }
 
 /** Convert GitHub-style admonitions to Medium italic+bold callouts. */
 function convertAdmonitionsForMedium(markdown) {
   return markdown.replace(
-    /^> \[!(NOTE|IMPORTANT|WARNING|CAUTION|TIP)\]\n((?:> [^\n]*\n?)+)/gm,
+    /^> \[!(NOTE|IMPORTANT|WARNING|CAUTION|TIP)\]\n((?:> ?[^\n]*\n?)+)/gm,
     (match, type, contentBlock) => {
       const label = ADMONITION_TYPE_MAP[type];
       const content = contentBlock

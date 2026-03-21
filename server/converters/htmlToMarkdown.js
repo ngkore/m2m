@@ -25,7 +25,8 @@ function unwrapMediumRedirect(href) {
 
 /** Resolve remaining Medium redirect links in raw Markdown text. */
 function resolveRedirectLinks(markdown) {
-  return markdown.replace(
+  // Handle /r/?url= redirects
+  markdown = markdown.replace(
     /\(https?:\/\/(?:www\.)?medium\.com\/r\/\?url=([^)\s]+)\)/g,
     (_, encoded) => {
       try {
@@ -35,6 +36,18 @@ function resolveRedirectLinks(markdown) {
       }
     }
   );
+  // Handle /m/global-identity?redirectUrl= redirects
+  markdown = markdown.replace(
+    /\(https?:\/\/(?:www\.)?medium\.com\/m\/global-identity\?redirectUrl=([^)\s]+)\)/g,
+    (_, encoded) => {
+      try {
+        return `(${decodeURIComponent(encoded)})`;
+      } catch (_) {
+        return `(${encoded})`;
+      }
+    }
+  );
+  return markdown;
 }
 
 /** Unwrap Embedly CDN wrapper URLs to the original source. */
@@ -313,8 +326,8 @@ function postProcessAdmonitions(markdown) {
       .trim()
       .replace(/\*\*(`[^`]+`)\*\*/g, '$1')
       .replace(/__(`[^`]+`)__/g, '$1')
-      .replace(/^(\*\*|__|_)/, '')
-      .replace(/(\*\*|__|_)$/, '')
+      .replace(/^(?:\*\*|__|[_*]|\s)+/, '')
+      .replace(/(?:\*\*|__|[_*]|\s)+$/, '')
       .trim();
     return `> [!${admonitionType}]\n> ${cleanContent}`;
   });

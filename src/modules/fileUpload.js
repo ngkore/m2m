@@ -98,7 +98,7 @@ function processMarkdownFile(mdFile, fileMap) {
   reader.onload = (ev) => {
     let content = ev.target.result;
     
-    content = content.replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, (match, alt, src) => {
+    content = content.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (match, alt, src) => {
       if (/^(https?:|data:)/.test(src)) return match;
       
       let matchedFile = null;

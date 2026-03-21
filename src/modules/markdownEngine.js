@@ -35,7 +35,7 @@ const ADMONITION_TYPE_MAP = {
 
 export function convertAdmonitionsForMedium(markdown) {
   return markdown.replace(
-    /^> \[!(NOTE|IMPORTANT|WARNING|CAUTION|TIP)\]\n((?:> [^\n]*\n?)+)/gm,
+    /^> \[!(NOTE|IMPORTANT|WARNING|CAUTION|TIP)\]\n((?:> ?[^\n]*\n?)+)/gm,
     (match, type, contentBlock) => {
       const label = ADMONITION_TYPE_MAP[type];
       const content = contentBlock
@@ -43,19 +43,19 @@ export function convertAdmonitionsForMedium(markdown) {
         .filter((l) => l.trim())
         .map((l) => l.replace(/^> ?/, ''))
         .join(' ');
-      return `> **_${label}:_** _${content}_\n`;
+      return `> _**${label}:** ${content}_\n`;
     }
   );
 }
 
 export function stripFrontMatter(markdown) {
-  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n*/m, '');
+  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n*/, '');
 }
 
 export function preprocessForMedium(markdown) {
   let md = stripFrontMatter(markdown);
 
-  md = md.replace(/!\[([^\]]*)\]\(https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/([^\)]+)\)/g, '![$1](https://raw.githubusercontent.com/$2/$3/$4/$5)');
+  md = md.replace(/!\[([^\]]*)\]\(https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/([^)\s]+)\)/g, '![$1](https://raw.githubusercontent.com/$2/$3/$4/$5)');
 
   md = md.replace(/^(\s*[-*+]\s+)\[[ ]\]/gm, '$1☐');
   md = md.replace(/^(\s*[-*+]\s+)\[[xX]\]/gm, '$1☑');
@@ -197,9 +197,9 @@ export function renderTableToImage(tableEl) {
   const cols = Math.max(headerCells.length, ...bodyCells.map((r) => r.length), 0);
   if (cols === 0) return null;
 
-  const superscripts = ['¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'];
+  const SUPERSCRIPT_DIGITS = { '0': '\u2070', '1': '\u00B9', '2': '\u00B2', '3': '\u00B3', '4': '\u2074', '5': '\u2075', '6': '\u2076', '7': '\u2077', '8': '\u2078', '9': '\u2079' };
   function toSuperscript(n) {
-    return n <= 9 ? superscripts[n - 1] : `^${n}`;
+    return String(n).split('').map(d => SUPERSCRIPT_DIGITS[d]).join('');
   }
 
   function processLinksInCell(cell) {
@@ -402,6 +402,64 @@ export function convertTablesToImages(container) {
   });
 }
 
+/** Wrap every preview image (except table images) with a "Copy Image" button
+ *  so users can copy individual images to clipboard and paste into Medium. */
+export function addCopyImageButtons(container) {
+  const images = container.querySelectorAll('.medium-preview img');
+  images.forEach((img) => {
+    if (img.closest('.table-image-wrapper') || img.closest('.m2md-image-wrapper')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'm2md-image-wrapper';
+
+    const copyImgBtn = document.createElement('button');
+    copyImgBtn.className = 'm2md-image-copy';
+    copyImgBtn.type = 'button';
+    copyImgBtn.title = 'Copy image to clipboard (then paste into Medium)';
+    copyImgBtn.textContent = 'Copy Image';
+
+    copyImgBtn.addEventListener('click', async () => {
+      try {
+        const resp = await fetch(img.src);
+        const blob = await resp.blob();
+        const pngBlob = blob.type === 'image/png'
+          ? blob
+          : await new Promise((resolve, reject) => {
+              const canvas = document.createElement('canvas');
+              const tempImg = new Image();
+              tempImg.onload = () => {
+                canvas.width = tempImg.naturalWidth;
+                canvas.height = tempImg.naturalHeight;
+                canvas.getContext('2d').drawImage(tempImg, 0, 0);
+                canvas.toBlob((b) => {
+                  if (b) resolve(b);
+                  else reject(new Error('Canvas toBlob returned null'));
+                }, 'image/png');
+              };
+              tempImg.onerror = () => reject(new Error('Image failed to load'));
+              tempImg.src = img.src;
+            });
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': pngBlob }),
+        ]);
+        copyImgBtn.textContent = 'Copied!';
+        copyImgBtn.classList.add('copied');
+      } catch (err) {
+        copyImgBtn.textContent = 'Failed';
+        copyImgBtn.classList.add('failed');
+      }
+      setTimeout(() => {
+        copyImgBtn.textContent = 'Copy Image';
+        copyImgBtn.classList.remove('copied', 'failed');
+      }, 2000);
+    });
+
+    img.parentNode.insertBefore(wrapper, img);
+    wrapper.appendChild(img);
+    wrapper.appendChild(copyImgBtn);
+  });
+}
+
 export function updateWordCharStats(text, elementId) {
   const el = document.getElementById(elementId);
   if (!el) return;
@@ -426,6 +484,7 @@ export function renderPreview() {
   DOM.previewContent.innerHTML = `<div class="medium-preview">${transformedHtml}</div>`;
 
   convertTablesToImages(DOM.previewContent);
+  addCopyImageButtons(DOM.previewContent);
   updateWordCharStats(DOM.previewContent.innerText || '', 'md-preview-stats');
 }
 
@@ -594,13 +653,14 @@ export function transformListsForMedium(html, transformUL = false) {
       if (isSimple) {
         // Merge into a single <p> separated by <br> so it's tight in Medium and Preview
         const p = document.createElement('p');
+        p.dataset.wasList = 'ol';
         items.forEach((li, idx) => {
           if (idx > 0) p.appendChild(document.createElement('br'));
-          
+
           const prefix = document.createElement('strong');
           prefix.textContent = `${startNum + idx}. `;
           p.appendChild(prefix);
-          
+
           const childP = li.querySelector(':scope > p');
           const source = childP ? childP : li;
           while (source.firstChild) p.appendChild(source.firstChild);
@@ -610,14 +670,37 @@ export function transformListsForMedium(html, transformUL = false) {
         return;
       }
 
-      // If there are complex blocks, render them as separate paragraphs/divs
+      // If there are complex blocks, render them as separate paragraphs/divs.
+      // Nested ULs under OL items are flattened: depth-3 sub-items get a), b)
+      // labels and are lifted into the depth-2 UL so Medium keeps everything
+      // grouped under the parent numbered item.
       items.forEach((li, idx) => {
+        const nestedList = li.querySelector(':scope > ul, :scope > ol');
         const hasBlock = Array.from(li.children).some(
-          c => c.tagName === 'P' || c.tagName === 'DIV' || c.tagName === 'BLOCKQUOTE' || c.tagName === 'PRE'
+          c => ['P', 'DIV', 'BLOCKQUOTE', 'PRE', 'TABLE'].includes(c.tagName)
         );
-        const wrapper = document.createElement(hasBlock ? 'div' : 'p');
+        const wrapper = document.createElement(hasBlock || nestedList ? 'div' : 'p');
+
+        if (nestedList) {
+          // Flatten depth-3 items into the depth-2 list with a), b), c) labels
+          nestedList.querySelectorAll(':scope > li').forEach((d2li) => {
+            const subList = d2li.querySelector(':scope > ul, :scope > ol');
+            if (!subList) return;
+            const d3items = Array.from(subList.children).filter(c => c.tagName === 'LI');
+            d3items.forEach((d3li, d3idx) => {
+              const letter = String.fromCharCode(97 + (d3idx % 26));
+              insertPrefix(d3li, `<strong>${letter})</strong> `);
+              // Lift into parent UL, right after the current d2 item
+              d2li.parentNode.insertBefore(d3li, d2li.nextSibling);
+            });
+            subList.remove();
+          });
+        }
+
+        // Move all children (including the now-flattened nested list) into wrapper
         while (li.firstChild) wrapper.appendChild(li.firstChild);
         insertPrefix(wrapper, `<strong>${startNum + idx}.</strong> `);
+        if (idx === items.length - 1) wrapper.dataset.wasList = 'ol';
         list.parentNode.insertBefore(wrapper, list);
       });
       list.remove();
@@ -627,6 +710,31 @@ export function transformListsForMedium(html, transformUL = false) {
     // ── UNORDERED LIST ───────────────────────────────────────────────────────
     const maxDepth = getMaxDepth(list, 1);
     if (!transformUL) return;
+
+    // When a UL immediately follows an OL (parsed as siblings because of
+    // indentation), treat it as sub-points of the preceding OL: keep items
+    // as native bullets, and label any depth-2 sub-items with a), b), c).
+    const prevSibling = list.previousElementSibling;
+    const followsOL = prevSibling && (
+      prevSibling.tagName === 'OL' ||
+      prevSibling.dataset.wasList === 'ol'
+    );
+    if (followsOL) {
+      // Flatten depth-2 sub-items into the top UL with a), b), c) labels
+      list.querySelectorAll(':scope > li').forEach((li) => {
+        const subList = li.querySelector(':scope > ul, :scope > ol');
+        if (!subList) return;
+        const subItems = Array.from(subList.children).filter(c => c.tagName === 'LI');
+        subItems.forEach((subLi, subIdx) => {
+          const letter = String.fromCharCode(97 + (subIdx % 26));
+          insertPrefix(subLi, `<strong>${letter})</strong> `);
+          li.parentNode.insertBefore(subLi, li.nextSibling);
+        });
+        subList.remove();
+      });
+      // Leave as native <ul> — Medium renders it as bullet points
+      return;
+    }
 
     if (maxDepth === 1) {
       // UL depth 1 → leave completely unchanged as native <ul>
@@ -754,5 +862,35 @@ export function buildMediumHtml(markdown) {
     html = tempDiv.innerHTML;
   }
   html = transformListsForMedium(html, true);
+
+  // Medium's paste handler strips <em> from <blockquote> content.  Replace the
+  // single wrapping <em> with separate per-segment <i> tags — Medium's
+  // contenteditable engine preserves the presentational <i> tag more reliably
+  // than the semantic <em>.  The <blockquote> is kept so Medium renders it as
+  // a quote block.
+  const admonitionLabelPattern = '(Note|Important|Warning|Caution|Tip)';
+  html = html.replace(
+    new RegExp(
+      '(<blockquote>\\s*<p>)\\s*<em><strong>' + admonitionLabelPattern +
+      '(:|:&#?\\w+;)<\\/strong>([\\s\\S]*?)<\\/em>(\\s*<\\/p>\\s*<\\/blockquote>)',
+      'gi'
+    ),
+    (_, open, label, colon, content, close) =>
+      `${open}<strong><i>${label}${colon}</i></strong><i>${content}</i>${close}`
+  );
+
+  // Medium's paste handler turns stray whitespace between block elements into
+  // extra empty blocks (empty code blocks, empty quotes, etc.).  Clean up:
+  //  - trailing newlines inside <code> (marked always adds one before </code>)
+  //  - empty <p> tags (with optional <br> inside)
+  //  - <br> tags adjacent to block-level open/close tags
+  html = html.replace(/\n<\/code>/g, '</code>');
+  html = html.replace(/<p>\s*(?:<br\s*\/?>)?\s*<\/p>/gi, '');
+  html = html.replace(/<br\s*\/?>\s*(<\/?(?:pre|blockquote|div|p|h[1-6]|ul|ol|li|table|hr)\b)/gi, '$1');
+  html = html.replace(/(<\/(?:pre|blockquote|div|p|h[1-6]|ul|ol|li|table)>)\s*<br\s*\/?>/gi, '$1');
+
+  // Remove internal data attributes used for list processing
+  html = html.replace(/ data-was-list="ol"/g, '');
+
   return html;
 }

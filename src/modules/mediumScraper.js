@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { DOM } from './dom.js';
 import { appState } from './state.js';
-import { marked, stripFrontMatter, updateWordCharStats } from './markdownEngine.js';
+import { marked, stripFrontMatter, updateWordCharStats, addCopyImageButtons } from './markdownEngine.js';
 
 function setLoading(loading) {
   if (!DOM.convertBtn || !DOM.urlInput) return;
@@ -55,57 +55,6 @@ function hideDownload() {
   if (DOM.downloadSection) DOM.downloadSection.hidden = true;
 }
 
-function addM2mdCopyImageButtons(container) {
-  const images = container.querySelectorAll('.medium-preview img');
-  images.forEach((img) => {
-    if (img.parentElement?.classList.contains('m2md-image-wrapper')) return;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'm2md-image-wrapper';
-
-    const copyImgBtn = document.createElement('button');
-    copyImgBtn.className = 'm2md-image-copy';
-    copyImgBtn.type = 'button';
-    copyImgBtn.title = 'Copy image to clipboard';
-    copyImgBtn.textContent = 'Copy Image';
-
-    copyImgBtn.addEventListener('click', async () => {
-      try {
-        const resp = await fetch(img.src);
-        const blob = await resp.blob();
-        const pngBlob = blob.type === 'image/png'
-          ? blob
-          : await new Promise((resolve) => {
-              const canvas = document.createElement('canvas');
-              const tempImg = new Image();
-              tempImg.onload = () => {
-                canvas.width = tempImg.naturalWidth;
-                canvas.height = tempImg.naturalHeight;
-                canvas.getContext('2d').drawImage(tempImg, 0, 0);
-                canvas.toBlob((b) => resolve(b), 'image/png');
-              };
-              tempImg.src = img.src;
-            });
-        await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': pngBlob }),
-        ]);
-        copyImgBtn.textContent = '✓ Copied!';
-        copyImgBtn.classList.add('copied');
-      } catch (err) {
-        copyImgBtn.textContent = '✗ Failed';
-        copyImgBtn.classList.add('failed');
-      }
-      setTimeout(() => {
-        copyImgBtn.textContent = 'Copy Image';
-        copyImgBtn.classList.remove('copied', 'failed');
-      }, 2000);
-    });
-
-    img.parentNode.insertBefore(wrapper, img);
-    wrapper.appendChild(img);
-    wrapper.appendChild(copyImgBtn);
-  });
-}
 
 function flashDownloadSuccess() {
   if (!DOM.downloadBtn) return;
@@ -251,11 +200,11 @@ export function setupMediumScraper() {
                 loaded++;
                 if (total > 1) showProgress(95, `Loading images (${loaded} of ${total})...`);
               }
-              addM2mdCopyImageButtons(DOM.m2mdPreviewContent);
+              addCopyImageButtons(DOM.m2mdPreviewContent);
             } catch (zipErr) {}
           }
           if (!data.zipBase64) {
-            addM2mdCopyImageButtons(DOM.m2mdPreviewContent);
+            addCopyImageButtons(DOM.m2mdPreviewContent);
           }
         }
 

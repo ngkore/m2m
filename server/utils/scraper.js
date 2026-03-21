@@ -252,7 +252,7 @@ function parseArticleHtml(html, sourceUrl = '') {
           t === 'Remember me for faster sign in' ||
           t === 'Member-only story' ||
           /^\d+\smin read$/.test(t) || 
-          /^[A-Z][a-z]{2}\s\d{1,2},\s\d{4}$/.test(t)
+          /^[A-Z][a-z]{2,8}\s\d{1,2},\s\d{4}$/.test(t)
         ) return true;
         
         // Remove stray horizontal lines often used as dividers

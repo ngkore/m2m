@@ -363,16 +363,16 @@ export function setupUI() {
       if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
         const { lineStart } = getLineIndices(DOM.markdownInput.value, start);
         const currentLine = DOM.markdownInput.value.substring(lineStart, start);
-        
+
         // Match unordered lists: "* ", "- ", "+ "
         // Also match checkboxes: "- [ ] ", "- [x] "
         const listMatch = currentLine.match(/^(\s*)([*+-]\s+(?:\[[ xX]\]\s+)?)(.*)$/);
-        
+
         if (listMatch) {
           const indent = listMatch[1];
           let prefix = listMatch[2];
           const textAfterPrefix = listMatch[3];
-          
+
           if (textAfterPrefix.trim() === '') {
             // If the user presses enter on an empty bullet line, remove the bullet
             e.preventDefault();
@@ -382,7 +382,7 @@ export function setupUI() {
             renderPreview();
             return;
           }
-          
+
           // For checkboxes, always insert an unchecked box
           if (prefix.includes('[x]') || prefix.includes('[X]')) {
              prefix = prefix.replace(/\[[xX]\]/, '[ ]');
